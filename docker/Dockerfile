@@ -1,14 +1,10 @@
-FROM sptrakesh/mmdb as mmdb
-
 FROM sptrakesh/boost as base
 
-COPY --from=mmdb /opt/local /opt/local
-COPY CMakeLists.txt /opt/spt/mmdb-ws/CMakeLists.txt
-COPY src /opt/spt/mmdb-ws/src
+COPY CMakeLists.txt /opt/spt/geojson-ds/CMakeLists.txt
+COPY src /opt/spt/geojson-ds/src
 
-WORKDIR /opt/spt/mmdb-ws/build
-RUN apk add --no-cache libmaxminddb-dev \
-  && rm -rf * \
+WORKDIR /opt/spt/geojson-ds/build
+RUN rm -rf * \
   && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/local -DBUILD_TESTING=OFF .. \
   && make -j8 \
   && make install

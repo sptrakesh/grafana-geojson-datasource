@@ -114,7 +114,7 @@ namespace spt::model
   struct Query
   {
     Query() = default;
-    Query( std::string_view json );
+    explicit Query( std::string_view json );
     ~Query() = default;
     Query( Query&& ) = default;
     Query& operator=( Query&& ) = default;
@@ -153,6 +153,8 @@ namespace spt::model
     Timestamp( const Timestamp& ) = delete;
     Timestamp& operator=( const Timestamp& ) = delete;
 
+    int64_t valueNs() const;
+
     std::string type;
     std::string value;
   };
@@ -185,6 +187,7 @@ namespace spt::model
   struct Row
   {
     Row() = default;
+    explicit Row( std::string_view json );
     ~Row() = default;
     Row( Row&& ) = default;
     Row& operator=( Row&& ) = default;

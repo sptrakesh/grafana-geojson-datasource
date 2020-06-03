@@ -62,20 +62,89 @@ namespace spt::model::pdefs
     }
     else LOG_WARN << "Invalid request, missing targets";
   }
+
+  int64_t nanoseconds( const std::string& value )
+  {
+    const auto usi = util::microSeconds( value );
+    const auto us = std::chrono::microseconds( usi );
+    return std::chrono::duration_cast<std::chrono::nanoseconds>( us ).count();
+  }
+}
+
+int64_t spt::model::Timestamp::valueNs() const
+{
+  return pdefs::nanoseconds( value );
+}
+
+spt::model::Row::Row( std::string_view json )
+{
+  using rapidjson::Pointer;
+
+  if ( json.empty() || json.size() < 2 )
+  {
+    LOG_WARN << "Empty JSON specified";
+    return;
+  }
+
+  // Trim initial + char
+  auto trimmed = json[0] == '+' ? json.substr( 1 ) : json;
+
+  auto d = rapidjson::Document{};
+  d.Parse( trimmed.data(), trimmed.size() );
+  if ( d.HasParseError() )
+  {
+    LOG_WARN << "Invalid json specified\n" << json;
+    return;
+  }
+
+  if ( auto v = Pointer( "/type" ).Get( d ) )
+  {
+    type = { v->GetString(), v->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid row, missing type";
+
+  if ( auto v = Pointer( "/value/type" ).Get( d ) )
+  {
+    value.type = { v->GetString(), v->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid row, missing value.type";
+
+  if ( auto v = Pointer( "/value/coordinates" ).Get( d ) )
+  {
+    const auto arr = v->GetArray();
+    if ( arr.Size() < 2 )
+    {
+      LOG_WARN << "Invalid coordinates array of size " << arr.Size();
+      return;
+    }
+
+    value.coordinates.reserve( 2 );
+    value.coordinates.push_back( arr[0].GetDouble() );
+    value.coordinates.push_back( arr[1].GetDouble() );
+  }
+  else LOG_WARN << "Invalid row, missing value.coordinates";
+
+  if ( auto v = Pointer( "/metadata/timestamp/type" ).Get( d ) )
+  {
+    metadata.timestamp.type = { v->GetString(), v->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid row, missing metadata.timestamp.type";
+
+  if ( auto v = Pointer( "/metadata/timestamp/value" ).Get( d ) )
+  {
+    metadata.timestamp.value = { v->GetString(), v->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid row, missing metadata.timestamp.value";
 }
 
 int64_t spt::model::Range::fromNs() const
 {
-  const auto usi = util::microSeconds( from );
-  const auto us = std::chrono::microseconds( usi );
-  return std::chrono::duration_cast<std::chrono::nanoseconds>( us ).count();
+  return pdefs::nanoseconds( from );
 }
 
 int64_t spt::model::Range::toNs() const
 {
-  const auto usi = util::microSeconds( to );
-  const auto us = std::chrono::microseconds( usi );
-  return std::chrono::duration_cast<std::chrono::nanoseconds>( us ).count();
+  return pdefs::nanoseconds( to );
 }
 
 spt::model::Query::Query( std::string_view json )

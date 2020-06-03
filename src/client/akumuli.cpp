@@ -6,9 +6,7 @@
 #include "log/NanoLog.h"
 #include "model/config.h"
 #include "util/context.h"
-#include "util/date.h"
-
-#include <chrono>
+#include "util/split.h"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/beast/core.hpp>
@@ -18,17 +16,12 @@
 #include <boost/beast/http/verb.hpp>
 #include <boost/beast/http/field.hpp>
 
+#include <vector>
+
 using spt::model::Response;
 
 namespace spt::client::pakumuli
 {
-  int64_t nanoseconds( const std::string& iso )
-  {
-    auto ims = util::microSeconds( iso );
-    auto ms = std::chrono::microseconds( ims );
-    return std::chrono::duration_cast<std::chrono::nanoseconds>( ms ).count();
-  }
-
   Response post( const std::string& payload )
   {
     namespace beast = boost::beast;     // from <boost/beast.hpp>
@@ -109,13 +102,13 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   }
 
   std::string metric;
-  if ( metric.empty() )
+  if ( query.targets[0].target.empty() )
   {
     LOG_WARN << "Invalid initial target in query";
     return {};
   }
 
-  if ( metric[0] != '!' )
+  if ( query.targets[0].target[0] != '!' )
   {
     metric.reserve( query.targets[0].target.size() + 1 );
     metric.push_back( '!' );
@@ -132,13 +125,32 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   std::ostringstream ss;
   ss << '{' <<
     R"("select-events": ")" << metric <<
-    R"(", "range": {"from": )" << pakumuli::nanoseconds( query.range.from ) <<
-    ", \"to\": " << pakumuli::nanoseconds( query.range.to ) <<
+    R"(", "range": {"from": )" << query.range.fromNs() <<
+    ", \"to\": " << query.range.toNs() <<
     R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
     '}';
   const auto q = ss.str();
   LOG_DEBUG << q;
-  return pakumuli::post( q );
+  auto resp = pakumuli::post( q );
+
+  if ( resp.status != 200 ) return resp;
+  if ( resp.body.empty() || resp.body[0] == '-' ) return resp;
+
+  std::vector<std::string_view> lines = util::split( resp.body, 64, "\r\n" );
+  if ( lines.size() < 3 ) return resp;
+
+  auto data = model::LocationResponse{};
+  data.type = "table";
+
+  data.columns.reserve( 1 );
+  data.columns.push_back( model::Column{ "location", "geo:json" } );
+
+  for ( std::size_t i = 2; i < lines.size(); i += 3 )
+  {
+    auto row = model::Row{};
+  }
+
+  return resp;
 }
 
 Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& /* request */ )

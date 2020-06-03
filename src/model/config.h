@@ -26,7 +26,7 @@ namespace spt::model
 
     std::string akumuli;
     int port = 8020;
-    int akumuliPort = 8282;
+    int akumuliPort = 8181;
     int threads = std::thread::hardware_concurrency();
 
     [[nodiscard]] std::string str() const;

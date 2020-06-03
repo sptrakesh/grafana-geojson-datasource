@@ -1,8 +1,10 @@
 #include "server.h"
+#include "client/akumuli.h"
 #include "log/NanoLog.h"
 #include "model/config.h"
 #include "util/context.h"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/strand.hpp>
@@ -112,6 +114,24 @@ namespace spt::server::impl
 
     if ( http::verb::post == req.method() && req.target() == "/query" )
     {
+      auto ct = req[http::field::content_type];
+      if ( ct.empty() ) return send( bad_request( "Content-Type header not specified" ) );
+      if ( !boost::algorithm::starts_with( ct, "application/json" ) )
+      {
+        return send( bad_request("Invalid Content-Type") );
+      }
+
+      const auto resp = client::akumuli::query( model::Query{ req.body() } );
+      http::response<http::string_body> res{http::status::ok, req.version()};
+      res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+      res.set( http::field::content_type, "text/plain" );
+      res.set( "Access-Control-Allow-Origin", "*" );
+      res.set( "Access-Control-Allow-Methods", "GET,POST" );
+      res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+      res.keep_alive( req.keep_alive() );
+      res.body() = resp.body;
+      res.prepare_payload();
+      return send( std::move( res ) );
     }
 
     if ( http::verb::post == req.method() && req.target() == "/annotations" )

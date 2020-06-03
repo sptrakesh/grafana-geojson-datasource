@@ -1,24 +1,12 @@
 #!/bin/sh
 
 LOGDIR=/opt/spt/logs
-DBFILE=/opt/spt/data/dbip.mmdb
-
-Decompress()
-{
-  if [ -f /opt/spt/data/dbip.mmdb.gz ]
-  then
-    gzip -dc /opt/spt/data/dbip.mmdb.gz > $DBFILE
-  else
-    echo "DB IP file not found.  Make sure it is mounted for the running container."
-    exit 1
-  fi
-}
 
 Defaults()
 {
   if [ -z "$PORT" ]
   then
-    PORT=8010
+    PORT=8020
     echo "PORT not set.  Will default to $PORT"
   fi
 
@@ -26,6 +14,21 @@ Defaults()
   then
     THREADS=8
     echo "THREADS not set.  Will default to $THREADS"
+  fi
+}
+
+Akumuli()
+{
+  if [ -z "$AKUMULI_HOST" ]
+  then
+    echo "AKUMULI_HOST not set."
+    exit 1
+  fi
+
+  if [ -z "$AKUMULI_PORT" ]
+  then
+    AKUMULI_PORT=8181
+    echo "AKUMULI_PORT not set.  Will default to $AKUMULI_PORT"
   fi
 }
 
@@ -37,8 +40,10 @@ Service()
     chown spt:spt $LOGDIR
   fi
 
-  echo "Starting up MaxMind DB websocket server"
-  /opt/spt/bin/mmdb-ws -c true -o ${LOGDIR}/ -p $PORT -n $THREADS -f $DBFILE
+  echo "Starting up Akumuli GeoJSON datasource service"
+  /opt/spt/bin/geojson-ds --console true --dir ${LOGDIR}/ \
+    --port $PORT --threads $THREADS \
+    --akumuli-host "$AKUMULI_HOST" --akumuli-port $AKUMULI_PORT
 }
 
-Decompress && Defaults && Service
+Defaults && Akumuli && Service

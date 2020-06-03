@@ -4,18 +4,17 @@ case "$1" in
   'start')
     (cd `dirname $0`;
     docker run -d --rm \
-      -v $PWD/dbip-city-lite-2020-06.mmdb.gz:/opt/spt/data/dbip.mmdb.gz:ro \
-      -p 8010:8010 \
-      --name mmdb-ws mmdb-ws)
+      -p 8020:8020 \
+      --name geojson-ds geojson-ds)
     ;;
   'logs')
-    docker logs mmdb-ws
+    docker logs geojson-ds
     ;;
   'stats')
-    docker stats mmdb-ws
+    docker stats geojson-ds
     ;;
   'stop')
-    docker stop mmdb-ws
+    docker stop geojson-ds
     ;;
   *)
     echo "Usage: $0 <start|logs|stats|stop>"

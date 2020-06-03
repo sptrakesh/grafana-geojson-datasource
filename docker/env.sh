@@ -1,4 +1,4 @@
 #!/bin/sh
 
-VERSION=0.5.1
-NAME='mmdb-ws'
+VERSION=0.1.0
+NAME='geojson-ds'
