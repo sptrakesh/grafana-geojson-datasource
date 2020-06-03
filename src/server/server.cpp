@@ -70,19 +70,6 @@ namespace spt::server::impl
           return res;
         };
 
-    // Returns a server error response
-    auto const server_error =
-        [&req](beast::string_view what)
-        {
-          http::response<http::string_body> res{http::status::internal_server_error, req.version()};
-          res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-          res.set(http::field::content_type, "text/plain");
-          res.keep_alive(req.keep_alive());
-          res.body() = "An error occurred: '" + std::string(what) + "'";
-          res.prepare_payload();
-          return res;
-        };
-
     // Make sure we can handle the method
     if( req.method() != http::verb::get &&
         req.method() != http::verb::post &&

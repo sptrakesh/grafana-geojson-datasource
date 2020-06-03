@@ -46,5 +46,5 @@ int main( int argc, char const * const * argv )
 
   nanolog::initialize( nanolog::GuaranteedLogger(), dir, "geojson-ds", console );
 
-  return spt::server::run( config );
+  return spt::server::run();
 }

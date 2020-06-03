@@ -33,9 +33,17 @@ set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_USE_MULTITHREADED ON)
 
 find_package(Boost REQUIRED)
+find_package(Threads)
+
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+endif()
 
 if (APPLE)
   set(CMAKE_MACOSX_RPATH 1)
+  include_directories(
+    /usr/local/boost/include
+  )
 else()
   include_directories(
     /opt/local/include
@@ -45,10 +53,11 @@ else()
   )
 endif()
 
-SET(CMAKE_INSTALL_PREFIX /opt/spt)
+set(CMAKE_INSTALL_PREFIX /opt/spt)
 
 add_subdirectory(src)
 
-enable_testing()
-add_subdirectory(test/unit)
+if (BUILD_TESTING)
+  add_subdirectory(test/unit)
+endif()
 

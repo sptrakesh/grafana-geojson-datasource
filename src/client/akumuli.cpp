@@ -141,12 +141,12 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   return pakumuli::post( q );
 }
 
-Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& request )
+Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& /* request */ )
 {
   return {};
 }
 
-Response spt::client::akumuli::search( const spt::model::Query& query )
+Response spt::client::akumuli::search( const spt::model::Query& /* query */ )
 {
   return {};
 }

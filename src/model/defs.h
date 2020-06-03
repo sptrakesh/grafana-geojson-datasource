@@ -4,59 +4,37 @@
 
 #pragma once
 
-#include "lithium_json.h"
-
-LI_SYMBOL(from)
-LI_SYMBOL(to)
-LI_SYMBOL(datasource)
-LI_SYMBOL(iconColor)
-LI_SYMBOL(enable)
-LI_SYMBOL(showLine)
-LI_SYMBOL(query)
-LI_SYMBOL(range)
-LI_SYMBOL(annotation)
-LI_SYMBOL(key)
-LI_SYMBOL(value)
-LI_SYMBOL(time)
-LI_SYMBOL(title)
-LI_SYMBOL(tags)
-LI_SYMBOL(text)
-LI_SYMBOL(target)
-LI_SYMBOL(refId)
-LI_SYMBOL(panelId)
-LI_SYMBOL(interval)
-LI_SYMBOL(intervalMs)
-LI_SYMBOL(targets);
-LI_SYMBOL(format);
-LI_SYMBOL(maxDataPoints);
-LI_SYMBOL(coordinates);
-LI_SYMBOL(timestamp);
-LI_SYMBOL(metadata);
-LI_SYMBOL(columns);
-LI_SYMBOL(rows);
-LI_SYMBOL(code);
-LI_SYMBOL(cause);
-
-LI_SYMBOL(raw);
-LI_SYMBOL(rangeRaw);
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace spt::model
 {
-  struct RangeRaw
-  {
-    std::string from;
-    std::string to;
-  };
-
   struct Range
   {
+    Range() = default;
+    ~Range() = default;
+    Range( Range&& ) = default;
+    Range& operator=( Range&& ) = default;
+    Range( const Range& ) = delete;
+    Range& operator=( const Range& ) = delete;
+
+    int64_t fromNs() const;
+    int64_t toNs() const;
+
     std::string from;
     std::string to;
-    RangeRaw raw;
   };
 
   struct Annotation
   {
+    Annotation() = default;
+    ~Annotation() = default;
+    Annotation( Annotation&& ) = default;
+    Annotation& operator=( Annotation&& ) = default;
+    Annotation( const Annotation& ) = delete;
+    Annotation& operator=( const Annotation& ) = delete;
+
     std::string name;
     std::string datasource;
     std::string iconColor;
@@ -67,19 +45,39 @@ namespace spt::model
 
   struct AnnotationsReq
   {
+    AnnotationsReq() = default;
+    ~AnnotationsReq() = default;
+    AnnotationsReq( AnnotationsReq&& ) = default;
+    AnnotationsReq& operator=( AnnotationsReq&& ) = default;
+    AnnotationsReq( const AnnotationsReq& ) = delete;
+    AnnotationsReq& operator=( const AnnotationsReq& ) = delete;
+
     Range range;
-    RangeRaw rangeRaw;
     Annotation annotation;
   };
 
   struct Tag
   {
+    Tag() = default;
+    ~Tag() = default;
+    Tag( Tag&& ) = default;
+    Tag& operator=( Tag&& ) = default;
+    Tag( const Tag& ) = delete;
+    Tag& operator=( const Tag& ) = delete;
+
     std::string key;
     std::string value;
   };
 
   struct AnnotationResponse
   {
+    AnnotationResponse() = default;
+    ~AnnotationResponse() = default;
+    AnnotationResponse( AnnotationResponse&& ) = default;
+    AnnotationResponse& operator=( AnnotationResponse&& ) = default;
+    AnnotationResponse( const AnnotationResponse& ) = delete;
+    AnnotationResponse& operator=( const AnnotationResponse& ) = delete;
+
     // The original annotation sent from Grafana.
     Annotation annotation;
     // Time since UNIX Epoch in milliseconds. (required)
@@ -94,48 +92,105 @@ namespace spt::model
 
   struct Target
   {
+    Target() = default;
+    ~Target() = default;
+    Target( Target&& ) = default;
+    Target& operator=( Target&& ) = default;
+    Target( const Target& ) = delete;
+    Target& operator=( const Target& ) = delete;
+
     std::string target;
     std::string refId;
     std::string type;
   };
 
+  struct Filter
+  {
+    std::string key;
+    std::string oper;
+    std::string value;
+  };
+
   struct Query
   {
+    Query() = default;
+    Query( std::string_view json );
+    ~Query() = default;
+    Query( Query&& ) = default;
+    Query& operator=( Query&& ) = default;
+    Query( const Query& ) = delete;
+    Query& operator=( const Query& ) = delete;
+
     int panelId;
     Range range;
-    RangeRaw rangeRaw;
     std::string interval;
     int intervalMs;
     std::vector<Target> targets;
+    std::vector<Filter> adhocFilters;
     std::string format;
     int maxDataPoints;
   };
 
   struct LocationValue
   {
+    LocationValue() = default;
+    ~LocationValue() = default;
+    LocationValue( LocationValue&& ) = default;
+    LocationValue& operator=( LocationValue&& ) = default;
+    LocationValue( const LocationValue& ) = delete;
+    LocationValue& operator=( const LocationValue& ) = delete;
+
     std::string type;
     std::vector<double> coordinates;
   };
 
   struct Timestamp
   {
+    Timestamp() = default;
+    ~Timestamp() = default;
+    Timestamp( Timestamp&& ) = default;
+    Timestamp& operator=( Timestamp&& ) = default;
+    Timestamp( const Timestamp& ) = delete;
+    Timestamp& operator=( const Timestamp& ) = delete;
+
     std::string type;
     std::string value;
   };
 
   struct Metadata
   {
+    Metadata() = default;
+    ~Metadata() = default;
+    Metadata( Metadata&& ) = default;
+    Metadata& operator=( Metadata&& ) = default;
+    Metadata( const Metadata& ) = delete;
+    Metadata& operator=( const Metadata& ) = delete;
+
     Timestamp timestamp;
   };
 
   struct Column
   {
+    Column() = default;
+    ~Column() = default;
+    Column( Column&& ) = default;
+    Column& operator=( Column&& ) = default;
+    Column( const Column& ) = delete;
+    Column& operator=( const Column& ) = delete;
+
     std::string text;
     std::string type;
   };
 
   struct Row
   {
+    Row() = default;
+    ~Row() = default;
+    Row( Row&& ) = default;
+    Row& operator=( Row&& ) = default;
+    Row( const Row& ) = delete;
+    Row& operator=( const Row& ) = delete;
+
     std::string type;
     LocationValue value;
     Metadata metadata;
@@ -143,6 +198,13 @@ namespace spt::model
 
   struct LocationResponse
   {
+    LocationResponse() = default;
+    ~LocationResponse() = default;
+    LocationResponse( LocationResponse&& ) = default;
+    LocationResponse& operator=( LocationResponse&& ) = default;
+    LocationResponse( const LocationResponse& ) = delete;
+    LocationResponse& operator=( const LocationResponse& ) = delete;
+
     std::vector<Column> columns;
     std::vector<std::vector<Row>> rows;
     std::string type;
@@ -150,17 +212,38 @@ namespace spt::model
 
   struct TagKey
   {
+    TagKey() = default;
+    ~TagKey() = default;
+    TagKey( TagKey&& ) = default;
+    TagKey& operator=( TagKey&& ) = default;
+    TagKey( const TagKey& ) = delete;
+    TagKey& operator=( const TagKey& ) = delete;
+
     std::string text;
     std::string type;
   };
 
   struct TagValue
   {
+    TagValue() = default;
+    ~TagValue() = default;
+    TagValue( TagValue&& ) = default;
+    TagValue& operator=( TagValue&& ) = default;
+    TagValue( const TagValue& ) = delete;
+    TagValue& operator=( const TagValue& ) = delete;
+
     std::string key;
   };
 
   struct Error
   {
+    Error() = default;
+    ~Error() = default;
+    Error( Error&& ) = default;
+    Error& operator=( Error&& ) = default;
+    Error( const Error& ) = delete;
+    Error& operator=( const Error& ) = delete;
+
     // Usually a HTTP status code associated with the error.
     int code;
 
