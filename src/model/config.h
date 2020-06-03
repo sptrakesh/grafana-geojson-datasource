@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <memory>
 #include <string>
 #include <thread>
 
@@ -12,9 +11,12 @@ namespace spt::model
 {
   struct Configuration
   {
-    using Ptr = std::shared_ptr<Configuration>;
+    static Configuration& instance()
+    {
+      static Configuration config;
+      return config;
+    }
 
-    Configuration() = default;
     ~Configuration() = default;
     Configuration( Configuration&& ) = default;
     Configuration& operator=( Configuration&& ) = default;
@@ -28,5 +30,8 @@ namespace spt::model
     int threads = std::thread::hardware_concurrency();
 
     [[nodiscard]] std::string str() const;
+
+  private:
+    Configuration() = default;
   };
 }

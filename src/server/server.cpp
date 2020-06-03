@@ -1,5 +1,7 @@
 #include "server.h"
 #include "log/NanoLog.h"
+#include "model/config.h"
+#include "util/context.h"
 
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -9,9 +11,7 @@
 #include <boost/beast/version.hpp>
 #include <boost/config.hpp>
 
-#include <algorithm>
 #include <cstdlib>
-#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
@@ -192,25 +192,18 @@ namespace spt::server::impl
 
     beast::tcp_stream stream_;
     beast::flat_buffer buffer_;
-    model::Configuration* configuration_;
     http::request<http::string_body> req_;
     std::shared_ptr<void> res_;
     send_lambda lambda_;
 
   public:
     // Take ownership of the stream
-    session(
-        tcp::socket&& socket,
-        model::Configuration* configuration)
-        : stream_(std::move(socket))
-        , configuration_(configuration)
-        , lambda_(*this)
+    session( tcp::socket&& socket ) : stream_(std::move(socket)), lambda_(*this)
     {
     }
 
     // Start the asynchronous operation
-    void
-    run()
+    void run()
     {
       // We need to be executing within a strand to perform async operations
       // on the I/O objects in this session. Although not strictly necessary
@@ -222,8 +215,7 @@ namespace spt::server::impl
               shared_from_this()));
     }
 
-    void
-    do_read()
+    void do_read()
     {
       // Make the request empty before reading,
       // otherwise the operation behavior is undefined.
@@ -239,34 +231,29 @@ namespace spt::server::impl
               shared_from_this()));
     }
 
-    void
-    on_read(
+    void on_read(
         beast::error_code ec,
         std::size_t bytes_transferred)
     {
       boost::ignore_unused(bytes_transferred);
 
       // This means they closed the connection
-      if(ec == http::error::end_of_stream)
-        return do_close();
+      if(ec == http::error::end_of_stream) return do_close();
 
-      if(ec)
-        return fail(ec, "read");
+      if(ec) return fail(ec, "read");
 
       // Send the response
       handle_request( std::move(req_), lambda_ );
     }
 
-    void
-    on_write(
+    void on_write(
         bool close,
         beast::error_code ec,
         std::size_t bytes_transferred)
     {
       boost::ignore_unused(bytes_transferred);
 
-      if(ec)
-        return fail(ec, "write");
+      if(ec) return fail(ec, "write");
 
       if(close)
       {
@@ -282,8 +269,7 @@ namespace spt::server::impl
       do_read();
     }
 
-    void
-    do_close()
+    void do_close()
     {
       // Send a TCP shutdown
       beast::error_code ec;
@@ -300,16 +286,10 @@ namespace spt::server::impl
   {
     net::io_context& ioc_;
     tcp::acceptor acceptor_;
-    model::Configuration* configuration_;
 
   public:
-    listener(
-        net::io_context& ioc,
-        tcp::endpoint endpoint,
-        model::Configuration* configuration)
-        : ioc_(ioc)
-        , acceptor_(net::make_strand(ioc))
-        , configuration_(configuration)
+    listener( net::io_context& ioc, tcp::endpoint endpoint)
+        : ioc_(ioc), acceptor_(net::make_strand(ioc))
     {
       beast::error_code ec;
 
@@ -376,9 +356,7 @@ namespace spt::server::impl
       else
       {
         // Create the session and run it
-        std::make_shared<session>(
-            std::move(socket),
-            configuration_)->run();
+        std::make_shared<session>( std::move(socket) )->run();
       }
 
       // Accept another connection
@@ -389,35 +367,35 @@ namespace spt::server::impl
 
 //------------------------------------------------------------------------------
 
-int spt::server::run( model::Configuration::Ptr configuration )
+int spt::server::run()
 {
   auto const address = net::ip::make_address( "0.0.0.0" );
-  net::io_context ioc{ configuration->threads + 1 };
+  const auto& configuration = model::Configuration::instance();
+  auto& ch = util::ContextHolder::instance( configuration.threads * 2 );
 
-  net::signal_set signals( ioc, SIGINT, SIGTERM );
+  net::signal_set signals( ch.ioc, SIGINT, SIGTERM );
   signals.async_wait(
       [&](beast::error_code const&, int)
       {
-        ioc.stop();
+        ch.ioc.stop();
       });
 
   // Create and launch a listening port
-  std::make_shared<impl::listener>( ioc,
-      tcp::endpoint{ address, static_cast<unsigned short>( configuration->port ) },
-      configuration.get() )->run();
+  std::make_shared<impl::listener>( ch.ioc,
+      tcp::endpoint{ address, static_cast<unsigned short>( configuration.port ) } )->run();
 
 // Run the I/O service on the requested number of threads
   std::vector<std::thread> v;
-  v.reserve( configuration->threads - 1 );
-  for( auto i = configuration->threads - 1; i > 0; --i )
+  v.reserve( configuration.threads * 2 - 1 );
+  for( auto i = configuration.threads * 2 - 1; i > 0; --i )
     v.emplace_back(
-        [&ioc]
+        [&ch]
         {
-          ioc.run();
+          ch.ioc.run();
         });
 
   LOG_INFO << "HTTP service started";
-  ioc.run();
+  ch.ioc.run();
 
   LOG_INFO << "HTTP service stopped";
   for ( auto& t : v ) t.join();

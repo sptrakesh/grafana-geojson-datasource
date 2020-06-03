@@ -22,7 +22,6 @@ LI_SYMBOL(title)
 LI_SYMBOL(tags)
 LI_SYMBOL(text)
 LI_SYMBOL(target)
-LI_SYMBOL(adhocFilters)
 LI_SYMBOL(refId)
 LI_SYMBOL(panelId)
 LI_SYMBOL(interval)
@@ -69,6 +68,7 @@ namespace spt::model
   struct AnnotationsReq
   {
     Range range;
+    RangeRaw rangeRaw;
     Annotation annotation;
   };
 
@@ -107,7 +107,6 @@ namespace spt::model
     std::string interval;
     int intervalMs;
     std::vector<Target> targets;
-    std::unordered_map<std::string, std::string> adhocFilters;
     std::string format;
     int maxDataPoints;
   };

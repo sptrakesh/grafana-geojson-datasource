@@ -5,11 +5,11 @@
 #pragma once
 
 #include "model/defs.h"
-#include "model/config.h"
+#include "model/response.h"
 
 namespace spt::client::akumuli
 {
-  std::string query( const model::Configuration* configuration, const model::Query& query );
-  std::string annotations( const model::Configuration* configuration, const model::AnnotationsReq& request );
-  std::string search( const model::Configuration* configuration, const model::Query& query );
+  model::Response query( const model::Query& query );
+  model::Response annotations( const model::AnnotationsReq& request );
+  model::Response search( const model::Query& query );
 }
