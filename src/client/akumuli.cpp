@@ -133,9 +133,18 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   LOG_DEBUG << q;
   auto resp = pakumuli::post( q );
 
-  if ( resp.status != 200 ) return resp;
-  if ( resp.body.empty() || resp.body[0] == '-' ) return resp;
+  if ( resp.status != 200 )
+  {
+    LOG_WARN << "Event query rejected with response " << resp.status;
+    return resp;
+  }
+  if ( resp.body.empty() || resp.body[0] == '-' )
+  {
+    LOG_WARN << "Event query returned error message " << resp.body;
+    return resp;
+  }
 
+  LOG_DEBUG << "Events response\n" << resp.body;
   std::vector<std::string_view> lines = util::split( resp.body, 64, "\r\n" );
   if ( lines.size() < 3 ) return resp;
 
@@ -147,7 +156,12 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
 
   for ( std::size_t i = 2; i < lines.size(); i += 3 )
   {
-    auto row = model::Row{};
+    LOG_DEBUG << "Parsing line " << lines[i];
+    auto row = model::Row{ lines[i] };
+    auto v = std::vector<model::Row>{};
+    v.reserve( 1 );
+    v.push_back( std::move( row ) );
+    data.rows.push_back( std::move( v ) );
   }
 
   return resp;
