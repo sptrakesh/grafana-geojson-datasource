@@ -44,6 +44,7 @@ SCENARIO("Parse query request")
         REQUIRE(query.range.fromNs() == 1477895624866000000);
         REQUIRE(query.range.toNs() == 1477917224866000000);
         REQUIRE(query.targets.size() == 2);
+        REQUIRE(query.adhocFilters.empty());
         REQUIRE(query.interval == "30s");
         REQUIRE(query.format == "json");
         REQUIRE(query.maxDataPoints == 550);
@@ -94,6 +95,10 @@ SCENARIO("Parse query request")
         REQUIRE(query.range.fromNs() == 1477895624866000000);
         REQUIRE(query.range.toNs() == 1477917224866000000);
         REQUIRE( query.targets.size() == 2 );
+        REQUIRE( query.adhocFilters.size() == 1 );
+        REQUIRE( query.adhocFilters[0].key == "City" );
+        REQUIRE( query.adhocFilters[0].oper == "=" );
+        REQUIRE( query.adhocFilters[0].value == "Berlin" );
         REQUIRE( query.interval == "30s" );
         REQUIRE( query.format == "json" );
         REQUIRE( query.maxDataPoints == 550 );

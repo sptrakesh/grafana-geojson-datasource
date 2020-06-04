@@ -63,6 +63,41 @@ namespace spt::model::pdefs
     else LOG_WARN << "Invalid request, missing targets";
   }
 
+  void parseAdhocFilters( std::vector<Filter>& v, rapidjson::Document& d )
+  {
+    using rapidjson::Pointer;
+
+    if ( auto value = Pointer( "/adhocFilters" ).Get( d ) )
+    {
+      const auto& a = value->GetArray();
+      for ( auto& iter : a )
+      {
+        Filter f;
+        const auto& o = iter.GetObject();
+        if ( o.HasMember( "key" ) )
+        {
+          const auto& m = o["key"];
+          f.key = { m.GetString(), m.GetStringLength() };
+        }
+
+        if ( o.HasMember( "operator" ) )
+        {
+          const auto& m = o["operator"];
+          f.oper = { m.GetString(), m.GetStringLength() };
+        }
+
+        if ( o.HasMember( "value" ) )
+        {
+          const auto& m = o["value"];
+          f.value = { m.GetString(), m.GetStringLength() };
+        }
+
+        v.push_back( std::move( f ) );
+      }
+    }
+    else LOG_INFO << "No adhoc filters specified";
+  }
+
   int64_t nanoseconds( const std::string& value )
   {
     const auto usi = util::microSeconds( value );
@@ -184,6 +219,7 @@ spt::model::Query::Query( std::string_view json )
   else LOG_WARN << "Invalid request, missing intervalMs";
 
   pdefs::parseTargets( targets, d );
+  pdefs::parseAdhocFilters( adhocFilters, d );
 
   if ( auto value = Pointer( "/format" ).Get( d ) )
   {
