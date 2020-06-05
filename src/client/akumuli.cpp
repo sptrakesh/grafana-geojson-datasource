@@ -143,6 +143,9 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   if ( resp.status != 200 )
   {
     LOG_WARN << "Event query rejected with response " << resp.status;
+    // Reset to prevent sending error to front-end
+    resp.status = 200;
+    resp.body = "[]";
     return resp;
   }
   if ( resp.body.empty() || resp.body[0] == '-' )

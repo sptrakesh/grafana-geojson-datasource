@@ -4,6 +4,8 @@
 
 #include "split.h"
 
+#include <algorithm>
+
 std::vector<std::string_view>
 spt::util::split( std::string_view csv, std::size_t sizehint,
     std::string_view delims )

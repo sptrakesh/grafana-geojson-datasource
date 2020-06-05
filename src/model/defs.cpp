@@ -383,7 +383,8 @@ spt::model::Query::Query( std::string_view json )
 
   if ( auto value = Pointer( "/panelId" ).Get( d ) )
   {
-    panelId = value->GetInt64();
+    if ( value->IsInt64() ) panelId = value->GetInt64();
+    else if ( value->IsInt() ) panelId = value->GetInt();
   }
   else LOG_WARN << "Invalid query request, missing panelId";
 
