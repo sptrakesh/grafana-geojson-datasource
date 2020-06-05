@@ -148,22 +148,8 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   std::vector<std::string_view> lines = util::split( resp.body, 64, "\r\n" );
   if ( lines.size() < 3 ) return resp;
 
-  auto data = model::LocationResponse{};
-  data.type = "table";
-
-  data.columns.reserve( 1 );
-  data.columns.push_back( model::Column{ "location", "geo:json" } );
-
-  for ( std::size_t i = 2; i < lines.size(); i += 3 )
-  {
-    LOG_DEBUG << "Parsing line " << lines[i];
-    auto row = model::Row{ lines[i] };
-    auto v = std::vector<model::Row>{};
-    v.reserve( 1 );
-    v.push_back( std::move( row ) );
-    data.rows.push_back( std::move( v ) );
-  }
-
+  auto data = model::LocationResponse{ lines };
+  resp.body = data.json();
   return resp;
 }
 

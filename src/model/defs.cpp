@@ -7,8 +7,10 @@
 #include "rapidjson/document.h"
 #include "rapidjson/pointer.h"
 #include "util/date.h"
+#include "util/split.h"
 
 #include <chrono>
+#include <sstream>
 
 namespace spt::model::pdefs
 {
@@ -103,6 +105,71 @@ namespace spt::model::pdefs
     const auto usi = util::microSeconds( value );
     const auto us = std::chrono::microseconds( usi );
     return std::chrono::duration_cast<std::chrono::nanoseconds>( us ).count();
+  }
+}
+
+std::string spt::model::LocationResponse::json() const
+{
+  std::ostringstream ss;
+  ss << "{\"columns\": [";
+  bool first = true;
+  for ( auto& c : columns )
+  {
+    if ( !first ) ss << ',';
+    ss << R"({"text": ")" << c.text << R"(", "type": ")" << c.type << "\"}";
+    first = false;
+  }
+  ss << "], \"rows\": [";
+
+  bool vf = true;
+  for ( auto& v : rows )
+  {
+    if ( !vf ) ss << ',';
+    ss << '[';
+    bool rf = true;
+    for ( auto& r : v )
+    {
+      if ( !rf ) ss << ',';
+      ss << R"({"type": ")" << r.type << R"(", "value": {"type": ")" <<
+        r.value.type << R"(", "coordinates": [)" <<
+        r.value.coordinates[0] << ',' << r.value.coordinates[1] <<
+        R"(], "metadata": {"timestamp": {"type": ")" << r.metadata.timestamp.type <<
+        R"(", "value": ")" << r.metadata.timestamp.value << "\"}}}}";
+      rf = false;
+    }
+    ss << ']';
+    vf = false;
+  }
+  ss << R"(], "type": ")" << type << "\"}";
+  return ss.str();
+}
+
+spt::model::LocationResponse::LocationResponse( const std::vector<std::string_view>& lines )
+{
+  load( lines );
+}
+
+spt::model::LocationResponse::LocationResponse( std::string_view resp )
+{
+  std::vector<std::string_view> lines = util::split( resp, 64, "\r\n" );
+  load( lines );
+}
+
+void spt::model::LocationResponse::load( const std::vector<std::string_view>& lines )
+{
+  type = "table";
+
+  columns.reserve( 1 );
+  columns.push_back( model::Column{ "location", "geo:json" } );
+
+  for ( std::size_t i = 2; i < lines.size(); i += 3 )
+  {
+    LOG_DEBUG << "Parsing line " << lines[i];
+    auto row = model::Row{ lines[i] };
+    auto v = std::vector<model::Row>{};
+    v.reserve( 1 );
+    v.push_back( std::move( row ) );
+    rows.push_back( std::move( v ) );
   }
 }
 

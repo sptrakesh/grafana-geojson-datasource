@@ -201,6 +201,8 @@ namespace spt::model
 
   struct LocationResponse
   {
+    explicit LocationResponse( std::string_view resp );
+    explicit LocationResponse( const std::vector<std::string_view>& lines );
     LocationResponse() = default;
     ~LocationResponse() = default;
     LocationResponse( LocationResponse&& ) = default;
@@ -208,9 +210,14 @@ namespace spt::model
     LocationResponse( const LocationResponse& ) = delete;
     LocationResponse& operator=( const LocationResponse& ) = delete;
 
+    std::string json() const;
+
     std::vector<Column> columns;
     std::vector<std::vector<Row>> rows;
     std::string type;
+
+  private:
+    void load( const std::vector<std::string_view>& lines );
   };
 
   struct TagKey
