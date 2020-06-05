@@ -26,6 +26,186 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace spt::server::impl
 {
+  // Returns a bad request response
+  template<class Body, class Allocator>
+  auto bad_request( http::request<Body, http::basic_fields<Allocator>>&& req, beast::string_view why )
+  {
+    http::response<http::string_body> res{http::status::bad_request, req.version()};
+    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(http::field::content_type, "text/plain");
+    res.keep_alive(req.keep_alive());
+    res.body() = std::string(why);
+    res.prepare_payload();
+    return res;
+  }
+
+  // Returns a not found response
+  template<class Body, class Allocator>
+  auto not_found( http::request<Body, http::basic_fields<Allocator>>&& req )
+  {
+    http::response<http::string_body> res{http::status::not_found, req.version()};
+    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(http::field::content_type, "text/plain");
+    res.keep_alive(req.keep_alive());
+    res.body() = "The resource '" + std::string( req.target() ) + "' was not found.";
+    res.prepare_payload();
+    return res;
+  }
+
+  template<class Body, class Allocator>
+  auto not_allowed( http::request<Body, http::basic_fields<Allocator>>&& req )
+  {
+    http::response<http::empty_body> res{ http::status::method_not_allowed,
+        req.version() };
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "text/plain" );
+    res.keep_alive( req.keep_alive() );
+    res.prepare_payload();
+    return res;
+  }
+
+  template<class Body, class Allocator>
+  auto slash( http::request<Body, http::basic_fields<Allocator>>&& req )
+  {
+    http::response<http::empty_body> res{http::status::ok, req.version()};
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "text/plain" );
+    res.set( "Access-Control-Allow-Origin", "*" );
+    res.set( "Access-Control-Allow-Methods", "GET,POST" );
+    res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+    res.keep_alive( req.keep_alive() );
+    res.prepare_payload();
+    return res;
+  }
+
+  template<class Body, class Allocator, class Send>
+  auto search( http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send )
+  {
+    auto ct = req[http::field::content_type];
+    if ( ct.empty() )
+    {
+      return send( bad_request( std::move( req ), "Content-Type header not specified" ) );
+    }
+    if ( !boost::algorithm::starts_with( ct, "application/json" ) )
+    {
+      return send( bad_request( std::move( req ), "Invalid Content-Type" ) );
+    }
+
+    const auto resp = client::akumuli::search( model::Target{ req.body() } );
+    http::response<http::string_body> res{http::int_to_status( resp.status ), req.version()};
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "application/json; charset=utf-8" );
+    res.set( "Access-Control-Allow-Origin", "*" );
+    res.set( "Access-Control-Allow-Methods", "GET,POST" );
+    res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+    res.keep_alive( req.keep_alive() );
+    res.body() = resp.body;
+    res.prepare_payload();
+    return send( std::move( res ) );
+  }
+
+  template<class Body, class Allocator, class Send>
+  auto query( http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send )
+  {
+    auto ct = req[http::field::content_type];
+    if ( ct.empty() )
+    {
+      return send( bad_request( std::move( req ), "Content-Type header not specified" ) );
+    }
+    if ( !boost::algorithm::starts_with( ct, "application/json" ) )
+    {
+      return send( bad_request( std::move( req ), "Invalid Content-Type" ) );
+    }
+
+    const auto resp = client::akumuli::query( model::Query{ req.body() } );
+    http::response<http::string_body> res{http::int_to_status( resp.status ), req.version()};
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "application/json; charset=utf-8" );
+    res.set( "Access-Control-Allow-Origin", "*" );
+    res.set( "Access-Control-Allow-Methods", "GET,POST" );
+    res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+    res.keep_alive( req.keep_alive() );
+    res.body() = resp.body;
+    res.prepare_payload();
+    return send( std::move( res ) );
+  }
+
+  template<class Body, class Allocator, class Send>
+  auto annotations( http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send )
+  {
+    auto ct = req[http::field::content_type];
+    if ( ct.empty() )
+    {
+      return send( bad_request( std::move( req ), "Content-Type header not specified" ) );
+    }
+    if ( !boost::algorithm::starts_with( ct, "application/json" ) )
+    {
+      return send( bad_request( std::move( req ), "Invalid Content-Type" ) );
+    }
+
+    const auto resp = client::akumuli::annotations( model::AnnotationsReq{ req.body() } );
+    http::response<http::string_body> res{http::int_to_status( resp.status ), req.version()};
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "application/json; charset=utf-8" );
+    res.set( "Access-Control-Allow-Origin", "*" );
+    res.set( "Access-Control-Allow-Methods", "GET,POST" );
+    res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+    res.keep_alive( req.keep_alive() );
+    res.body() = resp.body;
+    res.prepare_payload();
+    return send( std::move( res ) );
+  }
+
+  template<class Body, class Allocator, class Send>
+  auto tag_keys( http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send )
+  {
+    auto ct = req[http::field::content_type];
+    if ( ct.empty() )
+    {
+      return send( bad_request( std::move( req ), "Content-Type header not specified" ) );
+    }
+    if ( !boost::algorithm::starts_with( ct, "application/json" ) )
+    {
+      return send( bad_request( std::move( req ), "Invalid Content-Type" ) );
+    }
+
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "application/json; charset=utf-8" );
+    res.set( "Access-Control-Allow-Origin", "*" );
+    res.set( "Access-Control-Allow-Methods", "GET,POST" );
+    res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+    res.keep_alive( req.keep_alive() );
+    res.body() = "[]";
+    res.prepare_payload();
+    return send( std::move( res ) );
+  }
+
+  template<class Body, class Allocator, class Send>
+  auto tag_values( http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send )
+  {
+    auto ct = req[http::field::content_type];
+    if ( ct.empty() )
+    {
+      return send( bad_request( std::move( req ), "Content-Type header not specified" ) );
+    }
+    if ( !boost::algorithm::starts_with( ct, "application/json" ) )
+    {
+      return send( bad_request( std::move( req ), "Invalid Content-Type" ) );
+    }
+
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    res.set( http::field::content_type, "application/json; charset=utf-8" );
+    res.set( "Access-Control-Allow-Origin", "*" );
+    res.set( "Access-Control-Allow-Methods", "GET,POST" );
+    res.set( "Access-Control-Allow-Headers", "accept, content-type" );
+    res.keep_alive( req.keep_alive() );
+    res.body() = "[]";
+    res.prepare_payload();
+    return send( std::move( res ) );
+  }
+
   // This function produces an HTTP response for the given
   // request. The type of the response object depends on the
   // contents of the request, so the interface requires the
@@ -34,55 +214,18 @@ namespace spt::server::impl
   void handle_request(
       http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send)
   {
-    // Returns a bad request response
-    auto const bad_request =
-        [&req](beast::string_view why)
-        {
-          http::response<http::string_body> res{http::status::bad_request, req.version()};
-          res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-          res.set(http::field::content_type, "text/plain");
-          res.keep_alive(req.keep_alive());
-          res.body() = std::string(why);
-          res.prepare_payload();
-          return res;
-        };
-
-    // Returns a not found response
-    auto const not_found =
-        [&req](beast::string_view target)
-        {
-          http::response<http::string_body> res{http::status::not_found, req.version()};
-          res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-          res.set(http::field::content_type, "text/plain");
-          res.keep_alive(req.keep_alive());
-          res.body() = "The resource '" + std::string(target) + "' was not found.";
-          res.prepare_payload();
-          return res;
-        };
-
-    auto const not_allowed =
-        [&req]()
-        {
-          http::response<http::string_body> res{ http::status::method_not_allowed,
-              req.version() };
-          res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-          res.set( http::field::content_type, "text/plain" );
-          res.keep_alive( req.keep_alive() );
-          res.prepare_payload();
-          return res;
-        };
 
     // Make sure we can handle the method
     if( req.method() != http::verb::get &&
         req.method() != http::verb::post &&
         req.method() != http::verb::options )
-      return send( not_allowed() );
+      return send( not_allowed( std::move( req ) ) );
 
     // Request path must be absolute and not contain "..".
     if( req.target().empty() ||
         req.target()[0] != '/' ||
         req.target().find("..") != beast::string_view::npos)
-      return send(bad_request("Illegal request-target"));
+      return send( bad_request( std::move( req ), "Illegal request-target") );
 
     if ( req.method() == http::verb::options )
     {
@@ -97,56 +240,35 @@ namespace spt::server::impl
 
     if ( http::verb::get == req.method() && req.target() == "/" )
     {
-      http::response<http::empty_body> res{http::status::ok, req.version()};
-      res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-      res.set( http::field::content_type, "text/plain" );
-      res.set( "Access-Control-Allow-Origin", "*" );
-      res.set( "Access-Control-Allow-Methods", "GET,POST" );
-      res.set( "Access-Control-Allow-Headers", "accept, content-type" );
-      res.keep_alive( req.keep_alive() );
-      res.prepare_payload();
-      return send( std::move( res ) );
+      return send( slash( std::move( req ) ) );
     }
 
     if ( http::verb::post == req.method() && req.target() == "/search" )
     {
+      return search( std::move( req ), std::forward<Send>( send ) );
     }
 
     if ( http::verb::post == req.method() && req.target() == "/query" )
     {
-      auto ct = req[http::field::content_type];
-      if ( ct.empty() ) return send( bad_request( "Content-Type header not specified" ) );
-      if ( !boost::algorithm::starts_with( ct, "application/json" ) )
-      {
-        return send( bad_request("Invalid Content-Type") );
-      }
-
-      const auto resp = client::akumuli::query( model::Query{ req.body() } );
-      http::response<http::string_body> res{http::int_to_status( resp.status ), req.version()};
-      res.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-      res.set( http::field::content_type, "application/json; charset=utf-8" );
-      res.set( "Access-Control-Allow-Origin", "*" );
-      res.set( "Access-Control-Allow-Methods", "GET,POST" );
-      res.set( "Access-Control-Allow-Headers", "accept, content-type" );
-      res.keep_alive( req.keep_alive() );
-      res.body() = resp.body;
-      res.prepare_payload();
-      return send( std::move( res ) );
+      return query( std::move( req ), std::forward<Send>( send ) );
     }
 
     if ( http::verb::post == req.method() && req.target() == "/annotations" )
     {
+      return annotations( std::move( req ), std::forward<Send>( send ) );
     }
 
     if ( http::verb::post == req.method() && req.target() == "/tag-keys" )
     {
+      return tag_keys( std::move( req ), std::forward<Send>( send ) );
     }
 
     if ( http::verb::post == req.method() && req.target() == "/tag-values" )
     {
+      return tag_values( std::move( req ), std::forward<Send>( send ) );
     }
 
-    return send( not_found( req.target() ) );
+    return send( not_found( std::move( req ) ) );
   }
 
 //------------------------------------------------------------------------------

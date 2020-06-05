@@ -10,5 +10,5 @@ namespace spt::util
 {
   bool isLeapYear( int16_t year );
   int64_t microSeconds( const std::string& date );
-  std::string isoDate( int64_t epochInMicroseconds );
+  int64_t milliSeconds( const std::string& date );
 }

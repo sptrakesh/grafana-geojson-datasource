@@ -59,6 +59,24 @@ namespace spt::model::pdefs
           const auto& m = o["type"];
           t.type = { m.GetString(), m.GetStringLength() };
         }
+
+        if ( o.HasMember( "data") )
+        {
+          const auto& da = o["data"].GetObject();
+          for ( auto& di : da )
+          {
+            if ( di.value.IsString() )
+            {
+              t.data.insert( { { di.name.GetString(), di.name.GetStringLength() },
+                                { di.value.GetString(), di.value.GetStringLength() } } );
+            }
+            else
+            {
+              LOG_WARN << "Unsupported data with non string value " << di.name.GetString();
+            }
+          }
+        }
+
         v.push_back( std::move( t ) );
       }
     }
@@ -100,6 +118,17 @@ namespace spt::model::pdefs
     else LOG_INFO << "No adhoc filters specified";
   }
 
+  void parseAnnotation( model::Annotation& a, rapidjson::Document& d )
+  {
+    using rapidjson::Pointer;
+
+    if ( auto value = Pointer( "/annotation/name" ).Get( d ) )
+    {
+      a.name = { value->GetString(), value->GetStringLength() };
+    }
+    else LOG_INFO << "Invalid annotation json.  No name specified";
+  }
+
   int64_t nanoseconds( const std::string& value )
   {
     const auto usi = util::microSeconds( value );
@@ -108,39 +137,93 @@ namespace spt::model::pdefs
   }
 }
 
-std::string spt::model::LocationResponse::json() const
+spt::model::AnnotationsReq::AnnotationsReq( std::string_view json )
+{
+  LOG_DEBUG << "Parsing annotations request\n" << json;
+  using rapidjson::Pointer;
+
+  auto d = rapidjson::Document{};
+  d.Parse( json.data(), json.size() );
+  if ( d.HasParseError() )
+  {
+    LOG_WARN << "Invalid annotations request json specified\n" << json;
+    return;
+  }
+
+  if ( Pointer( "/range" ).Get( d ) )
+  {
+    pdefs::parseRange( range, d );
+  }
+  else LOG_WARN << "Invalid annotation request, missing range";
+}
+
+std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::parse(
+    const Annotation* a, std::string_view resp )
+{
+  const auto lines = util::split( resp, 64, "\r\n" );
+  std::vector<AnnotationResponse> response;
+  response.reserve( lines.size() / 3 );
+
+  int j = 0;
+  for ( std::size_t i = 0; i < lines.size(); ++i )
+  {
+    if ( j == 0 )
+    {
+      response.push_back( {} );
+      response.back().annotation = const_cast<Annotation*>( a );
+
+      auto series = util::split( lines[i], 8, " " );
+      for ( std::size_t k = 1; k < series.size(); ++k )
+      {
+        auto tags = util::split( series[k], 2, "=" );
+        if ( tags.size() == 2 )
+        {
+          response.back().tags.emplace_back(
+              Tag{ std::string{ tags[0].data(), tags[0].size() },
+              std::string{ tags[1].data(), tags[1].size() } } );
+        }
+      }
+    }
+    else if ( j == 1 )
+    {
+      response.back().time = util::milliSeconds( { lines[i].data(), lines[i].size() } );
+    }
+    else
+    {
+      auto row = model::Row{ lines[i] };
+      if ( row.value.coordinates.size() == 2 )
+      {
+        std::ostringstream  oss;
+        oss << row.value.coordinates[0] << "," << row.value.coordinates[1];
+        response.back().text = oss.str();
+        response.back().title = "Geo-Location";
+      }
+      else
+      {
+        response.back().text = "Unparseable location";
+      }
+    }
+
+    j = i % 3;
+  }
+
+  return response;
+}
+
+std::string spt::model::AnnotationResponse::json() const
 {
   std::ostringstream ss;
-  ss << "{\"columns\": [";
-  bool first = true;
-  for ( auto& c : columns )
-  {
-    if ( !first ) ss << ',';
-    ss << R"({"text": ")" << c.text << R"(", "type": ")" << c.type << "\"}";
-    first = false;
-  }
-  ss << "], \"rows\": [";
+  ss << R"({"text": ")" << text <<
+    R"(", "title": ")" << title <<
+    R"(", "time": )" << time <<
+    R"(", "tags": [)";
 
-  bool vf = true;
-  for ( auto& v : rows )
+  for ( const auto& tag : tags )
   {
-    if ( !vf ) ss << ',';
-    ss << '[';
-    bool rf = true;
-    for ( auto& r : v )
-    {
-      if ( !rf ) ss << ',';
-      ss << R"({"type": ")" << r.type << R"(", "value": {"type": ")" <<
-        r.value.type << R"(", "coordinates": [)" <<
-        r.value.coordinates[0] << ',' << r.value.coordinates[1] <<
-        R"(], "metadata": {"timestamp": {"type": ")" << r.metadata.timestamp.type <<
-        R"(", "value": ")" << r.metadata.timestamp.value << "\"}}}}";
-      rf = false;
-    }
-    ss << ']';
-    vf = false;
+    ss << R"({"key": ")" << tag.key << R"(", "value": ")" << tag.value << "\"}";
   }
-  ss << R"(], "type": ")" << type << "\"}";
+
+  ss << "]}";
   return ss.str();
 }
 
@@ -171,6 +254,42 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
     v.push_back( std::move( row ) );
     rows.push_back( std::move( v ) );
   }
+}
+
+std::string spt::model::LocationResponse::json() const
+{
+  std::ostringstream ss;
+  ss << "[{\"columns\": [";
+  bool first = true;
+  for ( auto& c : columns )
+  {
+    if ( !first ) ss << ',';
+    ss << R"({"text": ")" << c.text << R"(", "type": ")" << c.type << "\"}";
+    first = false;
+  }
+  ss << "], \"rows\": [";
+
+  bool vf = true;
+  for ( auto& v : rows )
+  {
+    if ( !vf ) ss << ',';
+    ss << '[';
+    bool rf = true;
+    for ( auto& r : v )
+    {
+      if ( !rf ) ss << ',';
+      ss << R"({"type": ")" << r.type << R"(", "value": {"type": ")" <<
+        r.value.type << R"(", "coordinates": [)" <<
+        r.value.coordinates[0] << ',' << r.value.coordinates[1] <<
+        R"(], "metadata": {"timestamp": {"type": ")" << r.metadata.timestamp.type <<
+        R"(", "value": ")" << r.metadata.timestamp.value << "\"}}}}";
+      rf = false;
+    }
+    ss << ']';
+    vf = false;
+  }
+  ss << R"(], "type": ")" << type << "\"}]";
+  return ss.str();
 }
 
 int64_t spt::model::Timestamp::valueNs() const
@@ -251,39 +370,40 @@ int64_t spt::model::Range::toNs() const
 
 spt::model::Query::Query( std::string_view json )
 {
+  LOG_DEBUG << "Parsing query\n" << json;
   using rapidjson::Pointer;
 
   auto d = rapidjson::Document{};
   d.Parse( json.data(), json.size() );
   if ( d.HasParseError() )
   {
-    LOG_WARN << "Invalid json specified\n" << json;
+    LOG_WARN << "Invalid query json specified\n" << json;
     return;
   }
 
   if ( auto value = Pointer( "/panelId" ).Get( d ) )
   {
-    panelId = value->GetInt();
+    panelId = value->GetInt64();
   }
-  else LOG_WARN << "Invalid request, missing panelId";
+  else LOG_WARN << "Invalid query request, missing panelId";
 
   if ( Pointer( "/range" ).Get( d ) )
   {
     pdefs::parseRange( range, d );
   }
-  else LOG_WARN << "Invalid request, missing range";
+  else LOG_WARN << "Invalid query request, missing range";
 
   if ( auto value = Pointer( "/interval" ).Get( d ) )
   {
     interval = { value->GetString(), value->GetStringLength() };
   }
-  else LOG_WARN << "Invalid request, missing interval";
+  else LOG_WARN << "Invalid query request, missing interval";
 
   if ( auto value = Pointer( "/intervalMs" ).Get( d ) )
   {
     intervalMs = value->GetInt();
   }
-  else LOG_WARN << "Invalid request, missing intervalMs";
+  else LOG_WARN << "Invalid query request, missing intervalMs";
 
   pdefs::parseTargets( targets, d );
   pdefs::parseAdhocFilters( adhocFilters, d );
@@ -292,11 +412,43 @@ spt::model::Query::Query( std::string_view json )
   {
     format = { value->GetString(), value->GetStringLength() };
   }
-  else LOG_WARN << "Invalid request, missing format";
+  else LOG_WARN << "Invalid query request, missing format";
 
   if ( auto value = Pointer( "/maxDataPoints" ).Get( d ) )
   {
     maxDataPoints = value->GetInt();
   }
-  else LOG_WARN << "Invalid request, missing maxDataPoints";
+  else LOG_WARN << "Invalid query request, missing maxDataPoints";
+}
+
+spt::model::Target::Target( std::string_view json )
+{
+  LOG_DEBUG << "Parsing target\n" << json;
+  using rapidjson::Pointer;
+
+  auto d = rapidjson::Document{};
+  d.Parse( json.data(), json.size() );
+  if ( d.HasParseError() )
+  {
+    LOG_WARN << "Invalid target json specified\n" << json;
+    return;
+  }
+
+  if ( auto value = Pointer( "/target" ).Get( d ) )
+  {
+    target = { value->GetString(), value->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid target request, missing target";
+
+  if ( auto value = Pointer( "/refId" ).Get( d ) )
+  {
+    refId = { value->GetString(), value->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid target request, missing refId";
+
+  if ( auto value = Pointer( "/type" ).Get( d ) )
+  {
+    type = { value->GetString(), value->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid target request, missing type";
 }

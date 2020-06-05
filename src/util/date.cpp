@@ -65,84 +65,53 @@ int64_t spt::util::microSeconds( const std::string& date )
   return epoch;
 }
 
-std::string spt::util::isoDate( int64_t epoch )
+int64_t spt::util::milliSeconds( const std::string& date )
 {
-  const int micros = epoch % int64_t( 1000 );
-  epoch /= int64_t( 1000 );
+  const auto microSecondsPerHour = int64_t( 3600000000 );
 
-  const int millis = epoch % int64_t( 1000 );
-  epoch /= int64_t( 1000 );
+  char *end;
+  const int16_t year = std::strtol( date.substr( 0, 4 ).c_str(), &end, 10 );
+  const int16_t month = std::strtol( date.substr( 4, 2 ).c_str(), &end, 10 );
+  const int16_t day = std::strtol( date.substr( 6, 2 ).c_str(), &end, 10 );
+  const int16_t hour = std::strtol( date.substr( 9, 2 ).c_str(), &end, 10 );
+  const int16_t minute = std::strtol( date.substr( 11, 2 ).c_str(), &end, 10 );
+  const int16_t second = std::strtol( date.substr( 13, 2 ).c_str(), &end, 10 );
+  const int16_t millis = std::strtol( date.substr( 16, 3 ).c_str(), &end, 10 );
+  const int16_t micros = std::strtol( date.substr( 19, 3 ).c_str(), &end, 10 );
 
-  const int second = epoch % 60;
+  int64_t epoch = micros;
+  epoch += millis * int64_t( 1000 );
+  epoch += second * int64_t( 1000000 );
+  epoch += minute * int64_t( 60000000 );
+  epoch += hour * microSecondsPerHour;
+  epoch += ( day - 1 ) * 24 * microSecondsPerHour;
 
-  epoch /= 60;
-  const int minute = epoch % 60;
+  const int8_t isLeap = isLeapYear( year );
 
-  epoch /= 60;
-  const int hour = epoch % 24;
-  epoch /= 24;
-  int year = 1970;
-
+  for ( int i = 1; i < month; ++i )
   {
-    int32_t days = 0;
-    while ( ( days += ( isLeapYear( year ) ) ? 366 : 365 ) <= epoch ) ++year;
-
-    days -= ( isLeapYear( year ) ) ? 366 : 365;
-    epoch -= days;
-  }
-
-  uint8_t isLeap = isLeapYear( year );
-  int month = 1;
-
-  for ( ; month < 13; ++month )
-  {
-    int8_t length = 0;
-
-    switch ( month )
+    switch ( i )
     {
     case 2:
-      length = isLeap ? 29 : 28;
+      epoch += ( (isLeap) ? 29 : 28 ) * 24 * microSecondsPerHour;
       break;
     case 4:
     case 6:
     case 9:
     case 11:
-      length = 30;
+      epoch += 30 * 24 * microSecondsPerHour;
       break;
     default:
-      length = 31;
+      epoch += 31 * 24 * microSecondsPerHour;
     }
-
-    if ( epoch >= length ) epoch -= length;
-    else break;
   }
 
-  const int day = epoch + 1;
-  std::stringstream ss;
-  ss << year << '-';
+  for ( int i = 1970; i < year; ++i )
+  {
+    if ( isLeapYear( i ) ) epoch += 366 * 24 * microSecondsPerHour;
+    else epoch += 365 * 24 * microSecondsPerHour;
+  }
 
-  if ( month < 10 ) ss << 0;
-  ss << month << '-';
-
-  if ( day < 10 ) ss << 0;
-  ss << day << 'T';
-
-  if ( hour < 10 ) ss << 0;
-  ss << hour << ':';
-
-  if ( minute < 10 ) ss << 0;
-  ss << minute << ':';
-
-  if ( second < 10 ) ss << 0;
-  ss << second << '.';
-
-  if ( millis < 10 ) ss << "00";
-  else if ( millis < 100 ) ss << 0;
-  ss << millis;
-
-  if ( micros < 10 ) ss << "00";
-  else if ( micros < 100 ) ss << 0;
-  ss << micros << 'Z';
-
-  return ss.str();
+  auto us = std::chrono::microseconds{ epoch };
+  return std::chrono::duration_cast<std::chrono::milliseconds>( us ).count();
 }

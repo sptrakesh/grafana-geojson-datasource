@@ -22,7 +22,7 @@ using spt::model::Response;
 
 namespace spt::client::pakumuli
 {
-  Response post( const std::string& payload )
+  Response post( const std::string& payload, std::string_view path )
   {
     namespace beast = boost::beast;     // from <boost/beast.hpp>
     namespace http = beast::http;       // from <boost/beast/http.hpp>
@@ -39,7 +39,7 @@ namespace spt::client::pakumuli
     auto const results = resolver.resolve( config.akumuli, std::to_string( config.akumuliPort ) );
     stream.connect( results );
 
-    const auto create = [&config, &payload]( const std::string& location = "/api/query" )
+    const auto create = [&config, &payload]( beast::string_view location )
     {
       http::request<http::string_body> req{ http::verb::post, location, 11 };
       req.set( http::field::host, config.akumuli );
@@ -53,11 +53,17 @@ namespace spt::client::pakumuli
       return req;
     };
 
-    http::write( stream, create() );
+    http::write( stream, create( beast::string_view{ path.data(), path.size() } ) );
 
     beast::flat_buffer buffer;
     http::response<http::string_body> res;
-    http::read( stream, buffer, res );
+    beast::error_code ec;
+    http::read( stream, buffer, res, ec );
+    if (ec)
+    {
+      LOG_WARN << ec.message();
+      return { 500, "", 0 };
+    }
 
     const auto finish = [st, &stream]( http::response<http::string_body>& res ) -> Response
     {
@@ -81,9 +87,9 @@ namespace spt::client::pakumuli
 
     auto location = res.find( http::field::location );
     LOG_INFO
-        << "Server specified redirect from path: /api/query to: "
+        << "Server specified redirect from path: " << path << " to: "
         << location->value().data();
-    http::write( stream, create( std::string{ location->value() } ));
+    http::write( stream, create( location->value() ) );
 
     buffer.clear();
     http::response<http::string_body> res1;
@@ -128,10 +134,11 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
     R"(", "range": {"from": )" << query.range.fromNs() <<
     ", \"to\": " << query.range.toNs() <<
     R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
+    R"(, "limit": )" << query.maxDataPoints <<
     '}';
   const auto q = ss.str();
   LOG_DEBUG << q;
-  auto resp = pakumuli::post( q );
+  auto resp = pakumuli::post( q, "/api/query" );
 
   if ( resp.status != 200 )
   {
@@ -144,8 +151,8 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
     return resp;
   }
 
-  LOG_DEBUG << "Events response\n" << resp.body;
   std::vector<std::string_view> lines = util::split( resp.body, 64, "\r\n" );
+  LOG_DEBUG << "Split response into " << int( lines.size() ) << " rows";
   if ( lines.size() < 3 ) return resp;
 
   auto data = model::LocationResponse{ lines };
@@ -153,12 +160,106 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
   return resp;
 }
 
-Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& /* request */ )
+Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& request )
 {
-  return {};
+  std::string metric;
+  if ( request.annotation.query.empty() )
+  {
+    LOG_WARN << "Invalid annotation query";
+    return {};
+  }
+
+  if ( request.annotation.query[0] != '!' )
+  {
+    metric.reserve( request.annotation.query.size() + 1 );
+    metric.push_back( '!' );
+    metric.append( request.annotation.query );
+  }
+  else
+  {
+    metric.reserve( request.annotation.query.size()  );
+    metric.append( request.annotation.query );
+  }
+
+  std::ostringstream ss;
+  ss << '{' <<
+     R"("select-events": ")" << metric <<
+     R"(", "range": {"from": )" << request.range.fromNs() <<
+     ", \"to\": " << request.range.toNs() <<
+     R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
+     '}';
+  const auto q = ss.str();
+  LOG_DEBUG << q;
+  auto resp = pakumuli::post( q, "/api/query" );
+
+  if ( resp.status != 200 )
+  {
+    LOG_WARN << "Annotation query rejected with response " << resp.status;
+    return resp;
+  }
+  if ( resp.body.empty() || resp.body[0] == '-' )
+  {
+    LOG_WARN << "Annotation query returned error message " << resp.body;
+    return resp;
+  }
+
+  const auto an = model::AnnotationResponse::parse( &request.annotation, resp.body );
+  std::ostringstream oss;
+  oss << '[';
+  for ( const auto& a : an ) oss << a.json();
+  oss << ']';
+  resp.body = oss.str();
+
+  return resp;
 }
 
-Response spt::client::akumuli::search( const spt::model::Query& /* query */ )
+Response spt::client::akumuli::search( const spt::model::Target& target )
 {
-  return {};
+  std::string prefix;
+  if ( target.target.empty() ) prefix = "!";
+  else if ( target.target[0] != '!' )
+  {
+    prefix.reserve( target.target.size() + 1 );
+    prefix.push_back( '!' );
+    prefix.append( target.target );
+  }
+  else
+  {
+    prefix.reserve( target.target.size() );
+    prefix.append( target.target );
+  }
+
+  std::ostringstream ss;
+  ss << R"({"select": "metric-names", "starts-with": ")" << prefix << "\"}";
+  const auto q = ss.str();
+  LOG_DEBUG << q;
+  auto resp = pakumuli::post( q, "/api/suggest" );
+
+  if ( resp.status != 200 )
+  {
+    LOG_WARN << "Series names query rejected with response " << resp.status;
+  }
+  LOG_DEBUG << "Matching series " << resp.body;
+
+  std::ostringstream oss;
+  oss << '[';
+
+  const auto lines = util::split( resp.body, 8, "\r\n" );
+  bool first = true;
+  for ( const auto line : lines )
+  {
+    if ( line.empty() ) continue;
+    if ( !first ) oss << ',';
+    first = false;
+
+    oss << '"';
+    if ( line[0] == '+' ) oss << line.substr( 1 );
+    else oss << line;
+    oss << '"';
+  }
+
+  oss << ']';
+  resp.body = oss.str();
+
+  return resp;
 }

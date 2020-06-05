@@ -6,6 +6,7 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace spt::model
@@ -45,6 +46,7 @@ namespace spt::model
 
   struct AnnotationsReq
   {
+    explicit AnnotationsReq( std::string_view json );
     AnnotationsReq() = default;
     ~AnnotationsReq() = default;
     AnnotationsReq( AnnotationsReq&& ) = default;
@@ -71,6 +73,7 @@ namespace spt::model
 
   struct AnnotationResponse
   {
+    static std::vector<AnnotationResponse> parse( const Annotation* a, std::string_view resp );
     AnnotationResponse() = default;
     ~AnnotationResponse() = default;
     AnnotationResponse( AnnotationResponse&& ) = default;
@@ -78,8 +81,10 @@ namespace spt::model
     AnnotationResponse( const AnnotationResponse& ) = delete;
     AnnotationResponse& operator=( const AnnotationResponse& ) = delete;
 
+    std::string json() const;
+
     // The original annotation sent from Grafana.
-    Annotation annotation;
+    Annotation* annotation;
     // Time since UNIX Epoch in milliseconds. (required)
     int64_t time;
     // The title for the annotation tooltip. (required)
@@ -92,6 +97,7 @@ namespace spt::model
 
   struct Target
   {
+    explicit Target( std::string_view json );
     Target() = default;
     ~Target() = default;
     Target( Target&& ) = default;
@@ -102,6 +108,7 @@ namespace spt::model
     std::string target;
     std::string refId;
     std::string type;
+    std::unordered_map<std::string, std::string> data;
   };
 
   struct Filter
@@ -121,14 +128,14 @@ namespace spt::model
     Query( const Query& ) = delete;
     Query& operator=( const Query& ) = delete;
 
-    int panelId;
+    int64_t panelId;
     Range range;
     std::string interval;
     int intervalMs;
     std::vector<Target> targets;
     std::vector<Filter> adhocFilters;
     std::string format;
-    int maxDataPoints;
+    int maxDataPoints = 100;
   };
 
   struct LocationValue

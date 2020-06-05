@@ -293,7 +293,8 @@ namespace nanolog
 
   NanoLogLine& NanoLogLine::operator<<(std::string_view arg)
   {
-    encode_c_string(arg.data(), arg.length());
+    auto str = std::string{ arg.data(), arg.size() };
+    encode_c_string(str.c_str(), str.size());
     return *this;
   }
 
