@@ -500,14 +500,10 @@ int spt::server::run()
 {
   auto const address = net::ip::make_address( "0.0.0.0" );
   const auto& configuration = model::Configuration::instance();
-  auto& ch = util::ContextHolder::instance( configuration.threads * 2 );
+  auto& ch = util::ContextHolder::instance( configuration.threads );
 
   net::signal_set signals( ch.ioc, SIGINT, SIGTERM );
-  signals.async_wait(
-      [&](beast::error_code const&, int)
-      {
-        ch.ioc.stop();
-      });
+  signals.async_wait( [&](beast::error_code const&, int) { ch.ioc.stop(); } );
 
   // Create and launch a listening port
   std::make_shared<impl::listener>( ch.ioc,
@@ -515,13 +511,11 @@ int spt::server::run()
 
 // Run the I/O service on the requested number of threads
   std::vector<std::thread> v;
-  v.reserve( configuration.threads * 2 - 1 );
-  for( auto i = configuration.threads * 2 - 1; i > 0; --i )
-    v.emplace_back(
-        [&ch]
-        {
-          ch.ioc.run();
-        });
+  v.reserve( configuration.threads - 1 );
+  for( auto i = configuration.threads - 1; i > 0; --i )
+  {
+    v.emplace_back( [&ch] { ch.ioc.run(); } );
+  }
 
   LOG_INFO << "HTTP service started";
   ch.ioc.run();

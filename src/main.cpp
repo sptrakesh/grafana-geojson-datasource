@@ -39,6 +39,13 @@ int main( int argc, char const * const * argv )
     exit(0);
   }
 
+  if ( config.akumuli.empty() )
+  {
+    std::cerr << "Akumuli host not specified" << std::endl;
+    options.writeToStream(std::cout);
+    exit( 1 );
+  }
+
   std::cout << "Starting daemon with options\n" <<
     "configuration: " << config.str() << '\n' <<
     "console: " << std::boolalpha << console << '\n' <<
