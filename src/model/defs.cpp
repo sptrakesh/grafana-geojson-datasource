@@ -12,6 +12,8 @@
 #include <chrono>
 #include <sstream>
 
+#include <boost/algorithm/string/replace.hpp>
+
 namespace spt::model::pdefs
 {
   void parseRange( Range& r, rapidjson::Document& d )
@@ -129,6 +131,30 @@ namespace spt::model::pdefs
       a.name = { value->GetString(), value->GetStringLength() };
     }
     else LOG_INFO << "Invalid annotation json.  No name specified";
+
+    if ( auto value = Pointer( "/annotation/datasource" ).Get( d ) )
+    {
+      a.datasource = { value->GetString(), value->GetStringLength() };
+    }
+    else LOG_INFO << "Invalid annotation json.  No datasource specified";
+
+    if ( auto value = Pointer( "/annotation/enable" ).Get( d ) )
+    {
+      a.enable = value->GetBool();
+    }
+    else LOG_INFO << "Invalid annotation json.  No enable specified";
+
+    if ( auto value = Pointer( "/annotation/iconColor" ).Get( d ) )
+    {
+      a.iconColor = { value->GetString(), value->GetStringLength() };
+    }
+    else LOG_INFO << "Invalid annotation json.  No iconColor specified";
+
+    if ( auto value = Pointer( "/annotation/query" ).Get( d ) )
+    {
+      a.query = { value->GetString(), value->GetStringLength() };
+    }
+    else LOG_INFO << "Invalid annotation json.  No query specified";
   }
 
   int64_t nanoseconds( const std::string& value )
@@ -157,6 +183,8 @@ spt::model::AnnotationsReq::AnnotationsReq( std::string_view json )
     pdefs::parseRange( range, d );
   }
   else LOG_WARN << "Invalid annotation request, missing range";
+
+  pdefs::parseAnnotation( annotation, d );
 }
 
 std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::parse(
@@ -166,9 +194,10 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
   std::vector<AnnotationResponse> response;
   response.reserve( lines.size() / 3 );
 
-  int j = 0;
   for ( std::size_t i = 0; i < lines.size(); ++i )
   {
+    const int j = i % 3;
+
     if ( j == 0 )
     {
       response.push_back( {} );
@@ -180,9 +209,11 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
         auto tags = util::split( series[k], 2, "=" );
         if ( tags.size() == 2 )
         {
+          auto value = std::string{ tags[1].data(), tags[1].size() };
+          boost::algorithm::replace_all( value, "\\", "" );
           response.back().tags.emplace_back(
               Tag{ std::string{ tags[0].data(), tags[0].size() },
-              std::string{ tags[1].data(), tags[1].size() } } );
+              std::move( value ) } );
         }
       }
     }
@@ -205,8 +236,6 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
         response.back().text = "Unparseable location";
       }
     }
-
-    j = i % 3;
   }
 
   return response;
@@ -218,11 +247,14 @@ std::string spt::model::AnnotationResponse::json() const
   ss << R"({"text": ")" << text <<
     R"(", "title": ")" << title <<
     R"(", "time": )" << time <<
-    R"(", "tags": [)";
+    R"(, "tags": [)";
 
+  bool first = true;
   for ( const auto& tag : tags )
   {
+    if ( !first ) ss << ',';
     ss << R"({"key": ")" << tag.key << R"(", "value": ")" << tag.value << "\"}";
+    first = false;
   }
 
   ss << "]}";

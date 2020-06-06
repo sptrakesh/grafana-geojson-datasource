@@ -206,12 +206,11 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
   }
 
   std::ostringstream ss;
-  ss << '{' <<
-     R"("select-events": ")" << metric <<
+  ss << R"({"select-events": ")" << metric <<
      R"(", "range": {"from": )" << request.range.fromNs() <<
      ", \"to\": " << request.range.toNs() <<
      R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
-     '}';
+     R"(, "limit": 10})";
   const auto q = ss.str();
   LOG_DEBUG << q;
   auto resp = pakumuli::post( q, "/api/query" );
@@ -230,9 +229,18 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
   const auto an = model::AnnotationResponse::parse( &request.annotation, resp.body );
   std::ostringstream oss;
   oss << '[';
-  for ( const auto& a : an ) oss << a.json();
+
+  bool first = true;
+  for ( const auto& a : an )
+  {
+    if ( !first ) oss << ',';
+    oss << a.json();
+    first = false;
+  }
+
   oss << ']';
   resp.body = oss.str();
+  LOG_DEBUG << resp.body;
 
   return resp;
 }
