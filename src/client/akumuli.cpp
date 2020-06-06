@@ -210,7 +210,7 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
      R"(", "range": {"from": )" << request.range.fromNs() <<
      ", \"to\": " << request.range.toNs() <<
      R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
-     R"(, "limit": 10})";
+     R"(, "limit": 1000})";
   const auto q = ss.str();
   LOG_DEBUG << q;
   auto resp = pakumuli::post( q, "/api/query" );
@@ -226,7 +226,7 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
     return resp;
   }
 
-  const auto an = model::AnnotationResponse::parse( &request.annotation, resp.body );
+  const auto an = model::AnnotationResponse::parse( resp.body );
   std::ostringstream oss;
   oss << '[';
 
@@ -240,7 +240,6 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
 
   oss << ']';
   resp.body = oss.str();
-  LOG_DEBUG << resp.body;
 
   return resp;
 }

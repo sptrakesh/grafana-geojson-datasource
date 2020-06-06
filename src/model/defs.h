@@ -73,7 +73,7 @@ namespace spt::model
 
   struct AnnotationResponse
   {
-    static std::vector<AnnotationResponse> parse( const Annotation* a, std::string_view resp );
+    static std::vector<AnnotationResponse> parse( std::string_view resp );
     AnnotationResponse() = default;
     ~AnnotationResponse() = default;
     AnnotationResponse( AnnotationResponse&& ) = default;
@@ -83,8 +83,6 @@ namespace spt::model
 
     std::string json() const;
 
-    // The original annotation sent from Grafana.
-    Annotation* annotation;
     // Time since UNIX Epoch in milliseconds. (required)
     int64_t time;
     // The title for the annotation tooltip. (required)

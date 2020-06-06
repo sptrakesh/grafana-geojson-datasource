@@ -10,14 +10,9 @@ local inspect = require "inspect"
 local requests = require "requests"
 
 describe("Grafana data source annotation endpoint test", function()
-  local baseUrl = "http://localhost:8021"
+  local baseUrl = "http://localhost:8020"
 
   local function is_array(tbl) return type(tbl) == 'table' and (#tbl > 0 or next(tbl) == nil) end
-  local function tablelength(T)
-    local count = 0
-    for _ in pairs(T) do count = count + 1 end
-    return count
-  end
 
   it("Simple annotation query test", function()
     local from = date(true)
@@ -52,5 +47,6 @@ describe("Grafana data source annotation endpoint test", function()
     assert.has_no.errors(function() response.json() end)
     local jsonBody = response.json()
     log.info(inspect(jsonBody))
+    assert.is.truthy(is_array(jsonBody))
   end)
 end)

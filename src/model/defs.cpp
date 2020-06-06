@@ -11,6 +11,7 @@
 
 #include <chrono>
 #include <sstream>
+#include <unordered_map>
 
 #include <boost/algorithm/string/replace.hpp>
 
@@ -188,7 +189,7 @@ spt::model::AnnotationsReq::AnnotationsReq( std::string_view json )
 }
 
 std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::parse(
-    const Annotation* a, std::string_view resp )
+    std::string_view resp )
 {
   const auto lines = util::split( resp, 64, "\r\n" );
   std::vector<AnnotationResponse> response;
@@ -201,7 +202,6 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
     if ( j == 0 )
     {
       response.push_back( {} );
-      response.back().annotation = const_cast<Annotation*>( a );
 
       auto series = util::split( lines[i], 8, " " );
       for ( std::size_t k = 1; k < series.size(); ++k )
@@ -226,8 +226,20 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
       auto row = model::Row{ lines[i] };
       if ( row.value.coordinates.size() == 2 )
       {
+        std::unordered_map<std::string, std::string> map;
+        map.reserve( response.back().tags.size() );
+        for ( const auto& tag : response.back().tags ) map.insert( { tag.key, tag.value } );
+
         std::ostringstream  oss;
-        oss << row.value.coordinates[0] << "," << row.value.coordinates[1];
+
+        auto it = map.find( "continent" );
+        if ( it != map.end() ) oss << it->second << ':';
+        it = map.find( "country" );
+        if ( it != map.end() ) oss << it->second << ':';
+        it = map.find( "city" );
+        if ( it != map.end() ) oss << it->second << ' ';
+
+        oss << '(' << row.value.coordinates[0] << "," << row.value.coordinates[1] << ')';
         response.back().text = oss.str();
         response.back().title = "Geo-Location";
       }
@@ -253,7 +265,7 @@ std::string spt::model::AnnotationResponse::json() const
   for ( const auto& tag : tags )
   {
     if ( !first ) ss << ',';
-    ss << R"({"key": ")" << tag.key << R"(", "value": ")" << tag.value << "\"}";
+    ss << '"' << tag.value << '"';
     first = false;
   }
 
