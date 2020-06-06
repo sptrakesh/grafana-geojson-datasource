@@ -89,6 +89,8 @@ namespace spt::model::pdefs
 
     if ( auto value = Pointer( "/adhocFilters" ).Get( d ) )
     {
+      if ( ! value->IsArray() ) return;
+
       const auto& a = value->GetArray();
       for ( auto& iter : a )
       {
@@ -247,7 +249,6 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
 
   for ( std::size_t i = 2; i < lines.size(); i += 3 )
   {
-    LOG_DEBUG << "Parsing line " << lines[i];
     auto row = model::Row{ lines[i] };
     auto v = std::vector<model::Row>{};
     v.reserve( 1 );
@@ -259,7 +260,7 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
 std::string spt::model::LocationResponse::json() const
 {
   std::ostringstream ss;
-  ss << "[{\"columns\": [";
+  ss << "{\"columns\": [";
   bool first = true;
   for ( auto& c : columns )
   {
@@ -288,7 +289,7 @@ std::string spt::model::LocationResponse::json() const
     ss << ']';
     vf = false;
   }
-  ss << R"(], "type": ")" << type << "\"}]";
+  ss << R"(], "type": ")" << type << "\"}";
   return ss.str();
 }
 

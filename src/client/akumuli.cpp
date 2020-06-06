@@ -107,59 +107,80 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
     return {};
   }
 
-  std::string metric;
-  if ( query.targets[0].target.empty() )
+  const auto target = [&query]( int index ) -> Response
   {
-    LOG_WARN << "Invalid initial target in query";
-    return {};
-  }
+    std::string metric;
+    if ( query.targets[index].target.empty() )
+    {
+      LOG_WARN << "Invalid target in query " << index;
+      return { 200, "[]", 0 };
+    }
 
-  if ( query.targets[0].target[0] != '!' )
-  {
-    metric.reserve( query.targets[0].target.size() + 1 );
-    metric.push_back( '!' );
-    metric.append( query.targets[0].target );
-  }
-  else
-  {
-    metric.reserve( query.targets[0].target.size() );
-    metric.append( query.targets[0].target );
-  }
+    if ( query.targets[index].target[0] != '!' )
+    {
+      metric.reserve( query.targets[index].target.size() + 1 );
+      metric.push_back( '!' );
+      metric.append( query.targets[index].target );
+    }
+    else
+    {
+      metric.reserve( query.targets[index].target.size() );
+      metric.append( query.targets[index].target );
+    }
 
-  boost::algorithm::replace_all( metric, "\\", "" );
+    boost::algorithm::replace_all( metric, "\\", "" );
 
+    std::ostringstream ss;
+    ss << '{' <<
+       R"("select-events": ")" << metric <<
+       R"(", "range": {"from": )" << query.range.fromNs() <<
+       ", \"to\": " << query.range.toNs() <<
+       R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
+       R"(, "limit": )" << query.maxDataPoints <<
+       '}';
+    const auto q = ss.str();
+    LOG_DEBUG << "Query for index " << index << ' ' << q;
+    auto resp = pakumuli::post( q, "/api/query" );
+
+    if ( resp.status != 200 )
+    {
+      LOG_WARN << "Event query for index " << index << " rejected with response " << resp.status;
+      // Reset to prevent sending error to front-end
+      resp.status = 200;
+      resp.body = "[]";
+      return resp;
+    }
+    if ( resp.body.empty() || resp.body[0] == '-' )
+    {
+      LOG_WARN << "Event query for index " << index << " returned error message " << resp.body;
+      return resp;
+    }
+
+    std::vector<std::string_view> lines = util::split( resp.body, 64, "\r\n" );
+    LOG_DEBUG << "Split response into " << int( lines.size() ) << " rows";
+    if ( lines.size() < 3 ) return resp;
+
+    auto data = model::LocationResponse{ lines };
+    resp.body = data.json();
+    return resp;
+  };
+
+  auto resp = Response{ 200, "[]", 0 };
   std::ostringstream ss;
-  ss << '{' <<
-    R"("select-events": ")" << metric <<
-    R"(", "range": {"from": )" << query.range.fromNs() <<
-    ", \"to\": " << query.range.toNs() <<
-    R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
-    R"(, "limit": )" << query.maxDataPoints <<
-    '}';
-  const auto q = ss.str();
-  LOG_DEBUG << q;
-  auto resp = pakumuli::post( q, "/api/query" );
+  ss << '[';
 
-  if ( resp.status != 200 )
+  bool first = true;
+  for ( std::size_t i = 0; i < query.targets.size(); ++i )
   {
-    LOG_WARN << "Event query rejected with response " << resp.status;
-    // Reset to prevent sending error to front-end
-    resp.status = 200;
-    resp.body = "[]";
-    return resp;
-  }
-  if ( resp.body.empty() || resp.body[0] == '-' )
-  {
-    LOG_WARN << "Event query returned error message " << resp.body;
-    return resp;
+    if ( !first ) ss << ',';
+    const auto r = target( i );
+    resp.time += r.time;
+    ss << r.body;
+    first = false;
   }
 
-  std::vector<std::string_view> lines = util::split( resp.body, 64, "\r\n" );
-  LOG_DEBUG << "Split response into " << int( lines.size() ) << " rows";
-  if ( lines.size() < 3 ) return resp;
-
-  auto data = model::LocationResponse{ lines };
-  resp.body = data.json();
+  ss << ']';
+  resp.body = ss.str();
   return resp;
 }
 
@@ -251,12 +272,13 @@ Response spt::client::akumuli::search( const spt::model::Target& target )
   bool first = true;
   for ( const auto line : lines )
   {
-    if ( line.empty() ) continue;
+    if ( line.size() < 2 ) continue;
     if ( !first ) oss << ',';
     first = false;
 
     oss << '"';
-    if ( line[0] == '+' ) oss << line.substr( 1 );
+    if ( line[0] == '+' && line[1] == '!' ) oss << line.substr( 2 );
+    else if ( line[0] == '+' ) oss << line.substr( 1 );
     else oss << line;
     oss << '"';
   }

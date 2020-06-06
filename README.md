@@ -2,12 +2,21 @@
 Datasource backend for the [Grafana Simple JSON](https://grafana.com/grafana/plugins/grafana-simple-json-datasource)
 datasource plugin.
 
+## Implementation
+
 Retrieves events stored in *geo:json* format in [Akumuli](https://akumuli.org/)
 in response the end endpoints mandated by the plugin.  We use the datasource to
 display location information on Grafana using the [trackmap](https://github.com/alexandrainst/alexandra-trackmap-panel)
 panel.
 
 ![Site Visitor Map](./resources/sample.png)
+
+### Use Case
+This service was developed to provide an insight into the geographic areas from
+which visitors access web sites/applications.  In particular, this service is
+used in conjunction with the [s3-proxy](https://github.com/sptrakesh/s3-proxy)
+and [mmdb-ws](https://github.com/sptrakesh/mmdb-ws) services to provide analytics
+related to visitors accessing front-end applications hosted from S3 buckets.
 
 ## Configuration
 The server can be configured with the following options:
