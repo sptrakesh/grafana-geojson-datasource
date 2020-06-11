@@ -7,6 +7,7 @@
 #include "../../src/rapidjson/document.h"
 #include "../../src/rapidjson/error/en.h"
 #include <iostream>
+#include <sstream>
 
 SCENARIO( "Parse location data in RESP format from Akumuli" )
 {
@@ -99,7 +100,9 @@ SCENARIO( "Parse location data in RESP format from Akumuli" )
 
       AND_THEN( "Serialising location response produces valid JSON" )
       {
-        const auto json = response.json();
+        std::ostringstream ss;
+        ss << response;
+        const auto json = ss.str();
         std::cout << json << std::endl;
         rapidjson::Document d;
         const auto& ok = d.Parse( json.data(), json.size() );

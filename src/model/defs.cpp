@@ -253,16 +253,16 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
   return response;
 }
 
-std::string spt::model::AnnotationResponse::json() const
+std::ostream& spt::model::operator<<( std::ostream& ss,
+    const spt::model::AnnotationResponse& resp )
 {
-  std::ostringstream ss;
-  ss << R"({"text": ")" << text <<
-    R"(", "title": ")" << title <<
-    R"(", "time": )" << time <<
-    R"(, "tags": [)";
+  ss << R"({"text": ")" << resp.text <<
+     R"(", "title": ")" << resp.title <<
+     R"(", "time": )" << resp.time <<
+     R"(, "tags": [)";
 
   bool first = true;
-  for ( const auto& tag : tags )
+  for ( const auto& tag : resp.tags )
   {
     if ( !first ) ss << ',';
     ss << '"' << tag.value << '"';
@@ -270,7 +270,7 @@ std::string spt::model::AnnotationResponse::json() const
   }
 
   ss << "]}";
-  return ss.str();
+  return ss;
 }
 
 spt::model::LocationResponse::LocationResponse( const std::vector<std::string_view>& lines )
@@ -301,12 +301,12 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
   }
 }
 
-std::string spt::model::LocationResponse::json() const
+std::ostream& spt::model::operator<<( std::ostream& ss,
+    const spt::model::LocationResponse& resp )
 {
-  std::ostringstream ss;
   ss << "{\"columns\": [";
   bool first = true;
-  for ( auto& c : columns )
+  for ( auto& c : resp.columns )
   {
     if ( !first ) ss << ',';
     ss << R"({"text": ")" << c.text << R"(", "type": ")" << c.type << "\"}";
@@ -315,7 +315,7 @@ std::string spt::model::LocationResponse::json() const
   ss << "], \"rows\": [";
 
   bool vf = true;
-  for ( auto& v : rows )
+  for ( auto& v : resp.rows )
   {
     if ( !vf ) ss << ',';
     ss << '[';
@@ -324,17 +324,17 @@ std::string spt::model::LocationResponse::json() const
     {
       if ( !rf ) ss << ',';
       ss << R"({"type": ")" << r.type << R"(", "value": {"type": ")" <<
-        r.value.type << R"(", "coordinates": [)" <<
-        r.value.coordinates[0] << ',' << r.value.coordinates[1] <<
-        R"(], "metadata": {"timestamp": {"type": ")" << r.metadata.timestamp.type <<
-        R"(", "value": ")" << r.metadata.timestamp.value << "\"}}}}";
+         r.value.type << R"(", "coordinates": [)" <<
+         r.value.coordinates[0] << ',' << r.value.coordinates[1] <<
+         R"(], "metadata": {"timestamp": {"type": ")" << r.metadata.timestamp.type <<
+         R"(", "value": ")" << r.metadata.timestamp.value << "\"}}}}";
       rf = false;
     }
     ss << ']';
     vf = false;
   }
-  ss << R"(], "type": ")" << type << "\"}";
-  return ss.str();
+  ss << R"(], "type": ")" << resp.type << "\"}";
+  return ss;
 }
 
 int64_t spt::model::Timestamp::valueNs() const

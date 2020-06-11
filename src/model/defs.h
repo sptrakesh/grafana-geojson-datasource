@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -81,8 +82,6 @@ namespace spt::model
     AnnotationResponse( const AnnotationResponse& ) = delete;
     AnnotationResponse& operator=( const AnnotationResponse& ) = delete;
 
-    std::string json() const;
-
     // Time since UNIX Epoch in milliseconds. (required)
     int64_t time;
     // The title for the annotation tooltip. (required)
@@ -92,6 +91,8 @@ namespace spt::model
     // Text for the annotation. (optional)
     std::string text;
   };
+
+  std::ostream& operator<<( std::ostream& os, const AnnotationResponse& resp );
 
   struct Target
   {
@@ -215,8 +216,6 @@ namespace spt::model
     LocationResponse( const LocationResponse& ) = delete;
     LocationResponse& operator=( const LocationResponse& ) = delete;
 
-    std::string json() const;
-
     std::vector<Column> columns;
     std::vector<std::vector<Row>> rows;
     std::string type;
@@ -224,6 +223,8 @@ namespace spt::model
   private:
     void load( const std::vector<std::string_view>& lines );
   };
+
+  std::ostream& operator<<( std::ostream& os, const LocationResponse& resp );
 
   struct TagKey
   {

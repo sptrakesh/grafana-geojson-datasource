@@ -161,7 +161,9 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
     if ( lines.size() < 3 ) return resp;
 
     auto data = model::LocationResponse{ lines };
-    resp.body = data.json();
+    std::ostringstream oss;
+    oss << data;
+    resp.body = oss.str();
     return resp;
   };
 
@@ -234,7 +236,7 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
   for ( const auto& a : an )
   {
     if ( !first ) oss << ',';
-    oss << a.json();
+    oss << a;
     first = false;
   }
 
