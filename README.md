@@ -1,4 +1,15 @@
 # Grafana Geo:JSON Datasource
+
+* [Implementation](#implementation)
+    * [Setup](#setup)
+        * [Datasource](#datasource)
+        * [Dashboard Variable](#dashboard-variable)
+        * [Metric Name](#metric-name)
+        * [Panel Query](#panel-query)
+    * [Use Case](#use-case)
+* [Configuration](#configuration)
+* [Acknowledgements](#acknowledgements)
+
 Datasource backend for the [Grafana Simple JSON](https://grafana.com/grafana/plugins/grafana-simple-json-datasource)
 datasource plugin.
 
@@ -14,6 +25,15 @@ panel.
 ![Filtered by Continent](./resources/continent.png)
 
 ### Setup
+Configuration of the datasource follows standard Grafana workflow.
+
+#### Datasource
+Deploy the service and point the **SimpleJson** datasource to use the service
+as the backend provider.
+
+![Datasource](./resources/datasource.png)
+
+#### Dashboard Variable
 Grafana dashboards where this datasource is used can use a *variable* to add
 **adhoc filters** to the Akumuli queries.  For the variable, select **Ad hoc filters**
 as the **Type**.  Select **SimpleJson** as the **Data source**.  The variable
@@ -23,11 +43,13 @@ The set up is illustrated in the following screen capture.
 
 ![Dashboard Variable](./resources/variable.png)
 
+#### Metric Name
 The other requirement is that the service be configured with a **metric** which
 can be used to query for **tag keys** and **values**.  This is a limitation in
 Grafana, where no **metric** context is available in the requests to the backend
 service for tag keys or values.
 
+#### Panel Query
 Location query panels can be created using the **SimpleJson** datasource.  Select
 the *timeserie* of interest using the list of series names returned by the
 auto-complete (`/search`) service.
