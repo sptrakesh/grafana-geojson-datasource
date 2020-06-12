@@ -165,10 +165,18 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
 
     if ( !query.adhocFilters.empty() )
     {
-      // TODO: check if same filter key and append multiple values
-      ss << R"(, "where": {")" << query.adhocFilters[0].key <<
-        "\": \"" <<
-        boost::algorithm::replace_all_copy( query.adhocFilters[0].value, " ", "__#SPACE#__" ) << "\"}";
+      ss << R"(, "where": {)";
+
+      bool first = true;
+      for ( const auto& f : query.adhocFilters )
+      {
+        if ( !first ) ss << ',';
+        ss << '"' << f.key << "\": \"" <<
+          boost::algorithm::replace_all_copy( f.value, " ", "__#SPACE#__" ) << "\"";
+        first = false;
+      }
+
+      ss << '}';
     }
 
     ss << '}';
