@@ -68,6 +68,8 @@ namespace spt::model
     Tag( const Tag& ) = delete;
     Tag& operator=( const Tag& ) = delete;
 
+    void parse( std::string_view json );
+
     std::string key;
     std::string value;
   };

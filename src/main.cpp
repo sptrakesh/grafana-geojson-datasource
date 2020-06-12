@@ -23,6 +23,7 @@ int main( int argc, char const * const * argv )
       Opt(config.threads, "threads")["-n"]["--threads"]("Number of server threads to spawn (default system)") |
       Opt(config.akumuli, "akumuli")["-a"]["--akumuli-host"]("Akumuli host to connect to") |
       Opt(config.akumuliPort, "akumuliPort")["-t"]["--akumuli-port"]("Akumuli port to connect to (default 8181)") |
+      Opt(config.metric, "metric")["-m"]["--metric-name"]("Metric to use for the tag-keys and tag-values endpoints.") |
       Opt(console, "console")["-c"]["--console"]("Log to console (default false)") |
       Opt(dir, "dir")["-o"]["--dir"]("Log directory (default logs/)");
 

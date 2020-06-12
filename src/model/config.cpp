@@ -12,8 +12,9 @@ std::string spt::model::Configuration::str() const
   ss << "{\"port\": " << port <<
      ", \"threads\": " << threads <<
      R"(, "akumuli": {"host": ")" << akumuli <<
-     R"(", "port": )" << akumuliPort << '}' <<
-     '}';
+     R"(", "port": )" << akumuliPort <<
+     R"(, "metric": ")" << metric <<
+     "\"}}";
   return ss.str();
 }
 

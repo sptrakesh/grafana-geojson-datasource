@@ -25,6 +25,7 @@ namespace spt::model
     Configuration& operator=( const Configuration& ) = delete;
 
     std::string akumuli;
+    std::string metric;
     int port = 8020;
     int akumuliPort = 8181;
     int threads = std::thread::hardware_concurrency();

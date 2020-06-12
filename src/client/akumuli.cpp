@@ -16,12 +16,38 @@
 #include <boost/beast/http/verb.hpp>
 #include <boost/beast/http/field.hpp>
 
+#include <sstream>
 #include <vector>
 
 using spt::model::Response;
 
 namespace spt::client::pakumuli
 {
+  std::string tagMetric()
+  {
+    const auto& m = model::Configuration::instance().metric;
+    if ( m.empty() )
+    {
+      LOG_INFO << "Metric not configured.  Cannot process tag-keys or tag-values";
+      return {};
+    }
+
+    std::string metric;
+    if ( m[0] != '!' )
+    {
+      metric.reserve( m.size() + 1 );
+      metric.push_back( '!' );
+      metric.append( m );
+    }
+    else
+    {
+      metric.reserve( m.size() );
+      metric.append( m );
+    }
+
+    return metric;
+  }
+
   Response post( const std::string& payload, std::string_view path )
   {
     namespace beast = boost::beast;     // from <boost/beast.hpp>
@@ -136,8 +162,16 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
        R"(", "range": {"from": )" << query.range.fromNs() <<
        ", \"to\": " << query.range.toNs() <<
        R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
-       R"(, "limit": )" << query.maxDataPoints <<
-       '}';
+       R"(, "limit": )" << query.maxDataPoints;
+
+    if ( !query.adhocFilters.empty() )
+    {
+      // TODO: check if same filter key and append multiple values
+      ss << R"(, "where": {")" << query.adhocFilters[0].key <<
+        "\": \"" << query.adhocFilters[0].value << "\"}";
+    }
+
+    ss << '}';
     const auto q = ss.str();
     LOG_DEBUG << "Query for index " << index << ' ' << q;
     auto resp = pakumuli::post( q, "/api/query" );
@@ -295,5 +329,107 @@ Response spt::client::akumuli::search( const spt::model::Target& target )
   oss << ']';
   resp.body = oss.str();
 
+  return resp;
+}
+
+Response spt::client::akumuli::tagKeys()
+{
+  const auto metric = pakumuli::tagMetric();
+  if ( metric.empty() )
+  {
+    LOG_INFO << "Metric not configured.  Cannot return tag-keys";
+    return { 200, "[]", 0 };
+  }
+
+  std::ostringstream ss;
+  ss << R"({"select": "tag-names", "starts-with": "", "metric": ")" << metric << "\"}";
+  const auto q = ss.str();
+  LOG_DEBUG << q;
+  auto resp = pakumuli::post( q, "/api/suggest" );
+
+  if ( resp.status != 200 )
+  {
+    LOG_WARN << "Tag names query rejected with response " << resp.status;
+  }
+  LOG_DEBUG << "Matching tags " << resp.body;
+
+  std::ostringstream oss;
+  oss << '[';
+
+  const auto lines = util::split( resp.body, 8, "\r\n" );
+  bool first = true;
+  for ( const auto line : lines )
+  {
+    if ( line.size() < 2 ) continue;
+
+    if ( line.find_first_of( ' ' ) != std::string_view::npos ||
+    line.find_first_of( '=' ) != std::string_view::npos )
+    {
+      LOG_DEBUG << "Skipping line " << line;
+      continue;
+    }
+
+    if ( !first ) oss << ',';
+    oss << R"({"type": "string", "text": ")";
+    if ( line[0] == '+' && line[1] == '!' ) oss << line.substr( 2 );
+    else if ( line[0] == '+' ) oss << line.substr( 1 );
+    else oss << line;
+    oss << "\"}";
+
+    first = false;
+  }
+
+  oss << ']';
+  resp.body = oss.str();
+  LOG_DEBUG << "Tag keys " << resp.body;
+  return resp;
+}
+
+Response spt::client::akumuli::tagValues( const model::Tag& tag )
+{
+  const auto metric = pakumuli::tagMetric();
+  if ( metric.empty() )
+  {
+    LOG_INFO << "Metric not configured.  Cannot return tag-values";
+    return { 200, "[]", 0 };
+  }
+
+  std::ostringstream ss;
+  ss << R"({"select": "tag-values", "starts-with": ")" << tag.value <<
+    R"(", "tag": ")" << tag.key <<
+    R"(", "metric": ")" << metric << "\"}";
+  const auto q = ss.str();
+
+  LOG_DEBUG << q;
+  auto resp = pakumuli::post( q, "/api/suggest" );
+
+  if ( resp.status != 200 )
+  {
+    LOG_WARN << "Tag values query rejected with response " << resp.status;
+  }
+  LOG_DEBUG << "Matching tag values " << resp.body;
+
+  std::ostringstream oss;
+  oss << '[';
+
+  const auto lines = util::split( resp.body, 8, "\r\n" );
+  bool first = true;
+  for ( const auto line : lines )
+  {
+    if ( line.size() < 2 ) continue;
+    if ( !first ) oss << ',';
+    first = false;
+
+    oss << R"({"type": "string", "text": ")";
+    if ( line[0] == '+' && line[1] == '!' ) oss << line.substr( 2 );
+    else if ( line[0] == '+' ) oss << line.substr( 1 );
+    else oss << line;
+    oss << "\"}";
+  }
+
+  oss << ']';
+  resp.body = oss.str();
+  boost::algorithm::replace_all( resp.body, "\\", "" );
+  LOG_DEBUG << "Tag values " << resp.body;
   return resp;
 }

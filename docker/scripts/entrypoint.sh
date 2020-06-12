@@ -30,6 +30,11 @@ Akumuli()
     AKUMULI_PORT=8181
     echo "AKUMULI_PORT not set.  Will default to $AKUMULI_PORT"
   fi
+
+  if [ -z "$METRIC_NAME" ]
+  then
+    echo "METRIC_NAME not set.  Tag services disabled."
+  fi
 }
 
 Service()
@@ -43,7 +48,8 @@ Service()
   echo "Starting up Akumuli GeoJSON datasource service"
   /opt/spt/bin/geojson-ds --console true --dir ${LOGDIR}/ \
     --port $PORT --threads $THREADS \
-    --akumuli-host "$AKUMULI_HOST" --akumuli-port $AKUMULI_PORT
+    --akumuli-host "$AKUMULI_HOST" --akumuli-port $AKUMULI_PORT \
+    --metric-name "$METRIC_NAME"
 }
 
 Defaults && Akumuli && Service

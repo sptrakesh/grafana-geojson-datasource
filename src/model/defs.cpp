@@ -467,6 +467,32 @@ spt::model::Query::Query( std::string_view json )
   else LOG_WARN << "Invalid query request, missing maxDataPoints";
 }
 
+void spt::model::Tag::parse( std::string_view json )
+{
+  LOG_DEBUG << "Parsing tag " << json;
+  using rapidjson::Pointer;
+
+  auto d = rapidjson::Document{};
+  d.Parse( json.data(), json.size() );
+  if ( d.HasParseError() )
+  {
+    LOG_WARN << "Invalid tag specified\n" << json;
+    return;
+  }
+
+  if ( auto v = Pointer( "/key" ).Get( d ) )
+  {
+    key = { v->GetString(), v->GetStringLength() };
+  }
+  else LOG_WARN << "Invalid tag request, missing key";
+
+  if ( auto v = Pointer( "/value" ).Get( d ) )
+  {
+    value = { v->GetString(), v->GetStringLength() };
+  }
+  else LOG_INFO << "No tag value";
+}
+
 spt::model::Target::Target( std::string_view json )
 {
   LOG_DEBUG << "Parsing target\n" << json;

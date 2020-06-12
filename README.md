@@ -25,6 +25,10 @@ The server can be configured with the following options:
 * `--akumuli-host` - Host name for connecting to *Akumuli*.
 * `--akumuli-port` - Port on which *Akumuli* query service listens.  Default
 is `8181`.
+* `--metric-name` - Default *metric* to match against for the optional `/tag-keys`
+and `/tag-values` endpoints.  Grafana *adhoc* filters are applied at the dashboard
+level, and the requests do not contain any *metric* related information.  If not
+specified, *tag* services will be disabled (return empty array).
 
 ## Acknowledgements
 This software has been developed mainly using work other people have contributed.
