@@ -16,9 +16,9 @@ datasource plugin.
 ## Implementation
 
 Retrieves events stored in *geo:json* format in [Akumuli](https://akumuli.org/)
-in response the end endpoints mandated by the plugin.  We use the datasource to
-display location information on Grafana using the [trackmap](https://github.com/alexandrainst/alexandra-trackmap-panel)
-panel.
+in response to the endpoints mandated by the **SimpleJson** plugin.  We use the
+datasource to display location information on Grafana using the
+[trackmap](https://github.com/alexandrainst/alexandra-trackmap-panel) panel.
 
 ![Site Visitor Map](./resources/sample.png)
 ![Filtered by Country](./resources/country.png)
