@@ -13,6 +13,21 @@ panel.
 ![Filtered by Country](./resources/country.png)
 ![Filtered by Continent](./resources/continent.png)
 
+### Setup
+Grafana dashboards where this datasource is used can use a *variable* to add
+**adhoc filters** to the Akumuli queries.  For the variable, select **Ad hoc filters**
+as the **Type**.  Select **SimpleJson** as the **Data source**.  The variable
+can be named as convenient.
+
+The set up is illustrated in the following screen capture.
+
+![Dashboard Variable](./resources/variable.png)
+
+The other requirement is that the service be configured with a **metric** which
+can be used to query for **tag keys** and **values**.  This is a limitation in
+Grafana, where no **metric** context is available in the requests to the backend
+service for tag keys or values.
+
 ### Use Case
 This service was developed to provide an insight into the geographic areas from
 which visitors access web sites/applications.  In particular, this service is
