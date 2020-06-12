@@ -10,6 +10,8 @@ display location information on Grafana using the [trackmap](https://github.com/
 panel.
 
 ![Site Visitor Map](./resources/sample.png)
+![Filtered by Country](./resources/country.png)
+![Filtered by Continent](./resources/continent.png)
 
 ### Use Case
 This service was developed to provide an insight into the geographic areas from
