@@ -16,6 +16,7 @@
 #include <boost/beast/http/verb.hpp>
 #include <boost/beast/http/field.hpp>
 
+#include <algorithm>
 #include <sstream>
 #include <vector>
 
@@ -154,8 +155,6 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
       metric.append( query.targets[index].target );
     }
 
-    boost::algorithm::replace_all( metric, "\\", "" );
-
     std::ostringstream ss;
     ss << '{' <<
        R"("select-events": ")" << metric <<
@@ -168,7 +167,8 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
     {
       // TODO: check if same filter key and append multiple values
       ss << R"(, "where": {")" << query.adhocFilters[0].key <<
-        "\": \"" << query.adhocFilters[0].value << "\"}";
+        "\": \"" <<
+        boost::algorithm::replace_all_copy( query.adhocFilters[0].value, " ", "__#SPACE#__" ) << "\"}";
     }
 
     ss << '}';
@@ -356,14 +356,15 @@ Response spt::client::akumuli::tagKeys()
   std::ostringstream oss;
   oss << '[';
 
-  const auto lines = util::split( resp.body, 8, "\r\n" );
+  auto lines = util::split( resp.body, 8, "\r\n" );
+  std::sort( std::begin( lines ), std::end( lines ) );
   bool first = true;
   for ( const auto line : lines )
   {
     if ( line.size() < 2 ) continue;
 
     if ( line.find_first_of( ' ' ) != std::string_view::npos ||
-    line.find_first_of( '=' ) != std::string_view::npos )
+      line.find_first_of( '=' ) != std::string_view::npos )
     {
       LOG_DEBUG << "Skipping line " << line;
       continue;
@@ -412,7 +413,8 @@ Response spt::client::akumuli::tagValues( const model::Tag& tag )
   std::ostringstream oss;
   oss << '[';
 
-  const auto lines = util::split( resp.body, 8, "\r\n" );
+  auto lines = util::split( resp.body, 8, "\r\n" );
+  std::sort( std::begin( lines ), std::end( lines ) );
   bool first = true;
   for ( const auto line : lines )
   {
@@ -421,15 +423,16 @@ Response spt::client::akumuli::tagValues( const model::Tag& tag )
     first = false;
 
     oss << R"({"type": "string", "text": ")";
-    if ( line[0] == '+' && line[1] == '!' ) oss << line.substr( 2 );
-    else if ( line[0] == '+' ) oss << line.substr( 1 );
-    else oss << line;
-    oss << "\"}";
+    std::string s;
+    if ( line[0] == '+' && line[1] == '!' ) s = line.substr( 2 );
+    else if ( line[0] == '+' ) s = line.substr( 1 );
+    else s = line;
+    boost::algorithm::replace_all( s, "__#SPACE#__", " " );
+    oss << s << "\"}";
   }
 
   oss << ']';
   resp.body = oss.str();
-  boost::algorithm::replace_all( resp.body, "\\", "" );
   LOG_DEBUG << "Tag values " << resp.body;
   return resp;
 }
