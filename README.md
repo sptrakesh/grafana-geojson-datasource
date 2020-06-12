@@ -28,6 +28,12 @@ can be used to query for **tag keys** and **values**.  This is a limitation in
 Grafana, where no **metric** context is available in the requests to the backend
 service for tag keys or values.
 
+Location query panels can be created using the **SimpleJson** datasource.  Select
+the *timeserie* of interest using the list of series names returned by the
+auto-complete (`/search`) service.
+
+![Panel Query](./resources/query.png)
+
 ### Use Case
 This service was developed to provide an insight into the geographic areas from
 which visitors access web sites/applications.  In particular, this service is
