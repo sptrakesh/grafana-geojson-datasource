@@ -192,6 +192,8 @@ namespace spt::model
     std::string type;
   };
 
+  std::ostream& operator<<( std::ostream& os, const Column& column );
+
   struct Row
   {
     Row() = default;
@@ -206,6 +208,8 @@ namespace spt::model
     LocationValue value;
     Metadata metadata;
   };
+
+  std::ostream& operator<<( std::ostream& os, const Row& row );
 
   struct LocationResponse
   {

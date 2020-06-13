@@ -9,7 +9,10 @@
 #include "util/date.h"
 #include "util/split.h"
 
+#include <algorithm>
 #include <chrono>
+#include <experimental/iterator>
+#include <iterator>
 #include <sstream>
 #include <unordered_map>
 
@@ -305,13 +308,8 @@ std::ostream& spt::model::operator<<( std::ostream& ss,
     const spt::model::LocationResponse& resp )
 {
   ss << "{\"columns\": [";
-  bool first = true;
-  for ( auto& c : resp.columns )
-  {
-    if ( !first ) ss << ',';
-    ss << R"({"text": ")" << c.text << R"(", "type": ")" << c.type << "\"}";
-    first = false;
-  }
+  std::copy( std::begin( resp.columns ), std::end( resp.columns ),
+      std::experimental::make_ostream_joiner( ss, ", " ) );
   ss << "], \"rows\": [";
 
   bool vf = true;
@@ -319,22 +317,29 @@ std::ostream& spt::model::operator<<( std::ostream& ss,
   {
     if ( !vf ) ss << ',';
     ss << '[';
-    bool rf = true;
-    for ( auto& r : v )
-    {
-      if ( !rf ) ss << ',';
-      ss << R"({"type": ")" << r.type << R"(", "value": {"type": ")" <<
-         r.value.type << R"(", "coordinates": [)" <<
-         r.value.coordinates[0] << ',' << r.value.coordinates[1] <<
-         R"(], "metadata": {"timestamp": {"type": ")" << r.metadata.timestamp.type <<
-         R"(", "value": ")" << r.metadata.timestamp.value << "\"}}}}";
-      rf = false;
-    }
+    std::copy( std::begin( v ), std::end( v ),
+        std::experimental::make_ostream_joiner( ss, ", " ) );
     ss << ']';
     vf = false;
   }
   ss << R"(], "type": ")" << resp.type << "\"}";
   return ss;
+}
+
+std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Column& column )
+{
+  os << R"({"text": ")" << column.text << R"(", "type": ")" << column.type << "\"}";
+  return os;
+}
+
+std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Row& row )
+{
+  os << R"({"type": ")" << row.type << R"(", "value": {"type": ")" <<
+     row.value.type << R"(", "coordinates": [)" <<
+     row.value.coordinates[0] << ',' << row.value.coordinates[1] <<
+     R"(], "metadata": {"timestamp": {"type": ")" << row.metadata.timestamp.type <<
+     R"(", "value": ")" << row.metadata.timestamp.value << "\"}}}}";
+  return os;
 }
 
 int64_t spt::model::Timestamp::valueNs() const
