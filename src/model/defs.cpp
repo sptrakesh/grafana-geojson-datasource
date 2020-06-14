@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <chrono>
 #include <experimental/iterator>
+#include <iomanip>
 #include <iterator>
 #include <sstream>
 #include <unordered_map>
@@ -259,16 +260,16 @@ std::vector<spt::model::AnnotationResponse> spt::model::AnnotationResponse::pars
 std::ostream& spt::model::operator<<( std::ostream& ss,
     const spt::model::AnnotationResponse& resp )
 {
-  ss << R"({"text": ")" << resp.text <<
-     R"(", "title": ")" << resp.title <<
-     R"(", "time": )" << resp.time <<
+  ss << R"({"text": )" << std::quoted( resp.text ) <<
+     R"(, "title": )" << std::quoted( resp.title ) <<
+     R"(, "time": )" << resp.time <<
      R"(, "tags": [)";
 
   bool first = true;
   for ( const auto& tag : resp.tags )
   {
     if ( !first ) ss << ',';
-    ss << '"' << tag.value << '"';
+    ss << std::quoted( tag.value );
     first = false;
   }
 
@@ -331,8 +332,8 @@ std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Row& r
 
 std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Filter& filter )
 {
-  os << '"' << filter.key << "\": \"" <<
-     boost::algorithm::replace_all_copy( filter.value, " ", "__#SPACE#__" ) << "\"";
+  os << std::quoted( filter.key ) << ": " <<
+     std::quoted( boost::algorithm::replace_all_copy( filter.value, " ", "__#SPACE#__" ) );
   return os;
 }
 

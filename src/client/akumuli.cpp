@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <experimental/iterator>
+#include <iomanip>
 #include <sstream>
 #include <vector>
 
@@ -114,8 +115,7 @@ namespace spt::client::pakumuli
     if ( res.result_int() != 301 ) return finish( res );
 
     auto location = res.find( http::field::location );
-    LOG_INFO
-        << "Server specified redirect from path: " << path << " to: "
+    LOG_INFO << "Server specified redirect from path: " << path << " to: "
         << location->value().data();
     http::write( stream, create( location->value() ) );
 
@@ -158,8 +158,8 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
 
     std::ostringstream ss;
     ss << '{' <<
-       R"("select-events": ")" << metric <<
-       R"(", "range": {"from": )" << query.range.fromNs() <<
+       R"("select-events": )" << std::quoted( metric ) <<
+       R"(, "range": {"from": )" << query.range.fromNs() <<
        ", \"to\": " << query.range.toNs() <<
        R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
        R"(, "limit": )" << query.maxDataPoints;
@@ -243,8 +243,8 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
   }
 
   std::ostringstream ss;
-  ss << R"({"select-events": ")" << metric <<
-     R"(", "range": {"from": )" << request.range.fromNs() <<
+  ss << R"({"select-events": )" << std::quoted( metric ) <<
+     R"(, "range": {"from": )" << request.range.fromNs() <<
      ", \"to\": " << request.range.toNs() <<
      R"(}, "output": {"format": "resp", "timestamp": "iso"})" <<
      R"(, "limit": 1000})";
@@ -291,7 +291,7 @@ Response spt::client::akumuli::search( const spt::model::Target& target )
   }
 
   std::ostringstream ss;
-  ss << R"({"select": "metric-names", "starts-with": ")" << prefix << "\"}";
+  ss << R"({"select": "metric-names", "starts-with": )" << std::quoted( prefix ) << '}';
   const auto q = ss.str();
   LOG_DEBUG << q;
   auto resp = pakumuli::post( q, "/api/suggest" );
@@ -336,7 +336,8 @@ Response spt::client::akumuli::tagKeys()
   }
 
   std::ostringstream ss;
-  ss << R"({"select": "tag-names", "starts-with": "", "metric": ")" << metric << "\"}";
+  ss << R"({"select": "tag-names", "starts-with": "", "metric": )" <<
+    std::quoted( metric ) << '}';
   const auto q = ss.str();
   LOG_DEBUG << q;
   auto resp = pakumuli::post( q, "/api/suggest" );
