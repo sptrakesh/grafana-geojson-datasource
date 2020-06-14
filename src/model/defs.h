@@ -119,6 +119,8 @@ namespace spt::model
     std::string value;
   };
 
+  std::ostream& operator<<( std::ostream& os, const Filter& filter );
+
   struct Query
   {
     Query() = default;
@@ -223,7 +225,7 @@ namespace spt::model
     LocationResponse& operator=( const LocationResponse& ) = delete;
 
     std::vector<Column> columns;
-    std::vector<std::vector<Row>> rows;
+    std::vector<Row> rows;
     std::string type;
 
   private:

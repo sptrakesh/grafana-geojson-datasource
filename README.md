@@ -6,6 +6,7 @@
         * [Dashboard Variable](#dashboard-variable)
         * [Metric Name](#metric-name)
         * [Panel Query](#panel-query)
+        * [Filters](#filters)
     * [Use Case](#use-case)
 * [Configuration](#configuration)
 * [Acknowledgements](#acknowledgements)
@@ -55,6 +56,18 @@ the *timeserie* of interest using the list of series names returned by the
 auto-complete (`/search`) service.
 
 ![Panel Query](./resources/query.png)
+
+#### Filters
+Additional filters may be applied via the *adhoc filter* mechanism.  Assuming
+that a *dashboard variable* was configured as documented earlier, we can apply
+additional filters based on *Akumuli series tags*.  Click the `+` button next
+to the **Filter** option on dashboard and select an appropriate tag (handled
+by the `/tag-keys` service endpoint).  Select the value to filter by (handled
+by the `/tag-values` service endpoint).  The map panel will not be automatically
+filtered by the *adhoc query*.  You can add additional filters as appropriate
+as illustrated by the sceen capture below.
+
+![Filters](./resources/filters.png)
 
 ### Use Case
 This service was developed to provide an insight into the geographic areas from

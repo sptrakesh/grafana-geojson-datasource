@@ -296,11 +296,7 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
 
   for ( std::size_t i = 2; i < lines.size(); i += 3 )
   {
-    auto row = model::Row{ lines[i] };
-    auto v = std::vector<model::Row>{};
-    v.reserve( 1 );
-    v.push_back( std::move( row ) );
-    rows.push_back( std::move( v ) );
+    rows.emplace_back( lines[i] );
   }
 }
 
@@ -311,17 +307,8 @@ std::ostream& spt::model::operator<<( std::ostream& ss,
   std::copy( std::begin( resp.columns ), std::end( resp.columns ),
       std::experimental::make_ostream_joiner( ss, ", " ) );
   ss << "], \"rows\": [";
-
-  bool vf = true;
-  for ( auto& v : resp.rows )
-  {
-    if ( !vf ) ss << ',';
-    ss << '[';
-    std::copy( std::begin( v ), std::end( v ),
-        std::experimental::make_ostream_joiner( ss, ", " ) );
-    ss << ']';
-    vf = false;
-  }
+  std::copy( std::begin( resp.rows ), std::end( resp.rows ),
+      std::experimental::make_ostream_joiner( ss, ", " ) );
   ss << R"(], "type": ")" << resp.type << "\"}";
   return ss;
 }
@@ -334,11 +321,18 @@ std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Column
 
 std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Row& row )
 {
-  os << R"({"type": ")" << row.type << R"(", "value": {"type": ")" <<
+  os << R"([{"type": ")" << row.type << R"(", "value": {"type": ")" <<
      row.value.type << R"(", "coordinates": [)" <<
      row.value.coordinates[0] << ',' << row.value.coordinates[1] <<
      R"(], "metadata": {"timestamp": {"type": ")" << row.metadata.timestamp.type <<
-     R"(", "value": ")" << row.metadata.timestamp.value << "\"}}}}";
+     R"(", "value": ")" << row.metadata.timestamp.value << "\"}}}}]";
+  return os;
+}
+
+std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Filter& filter )
+{
+  os << '"' << filter.key << "\": \"" <<
+     boost::algorithm::replace_all_copy( filter.value, " ", "__#SPACE#__" ) << "\"";
   return os;
 }
 

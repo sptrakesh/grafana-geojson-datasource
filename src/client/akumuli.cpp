@@ -17,6 +17,7 @@
 #include <boost/beast/http/field.hpp>
 
 #include <algorithm>
+#include <experimental/iterator>
 #include <sstream>
 #include <vector>
 
@@ -166,16 +167,8 @@ Response spt::client::akumuli::query( const spt::model::Query& query )
     if ( !query.adhocFilters.empty() )
     {
       ss << R"(, "where": {)";
-
-      bool first = true;
-      for ( const auto& f : query.adhocFilters )
-      {
-        if ( !first ) ss << ',';
-        ss << '"' << f.key << "\": \"" <<
-          boost::algorithm::replace_all_copy( f.value, " ", "__#SPACE#__" ) << "\"";
-        first = false;
-      }
-
+      std::copy( std::begin( query.adhocFilters ), std::end( query.adhocFilters ),
+          std::experimental::make_ostream_joiner( ss, ", " ) );
       ss << '}';
     }
 
@@ -273,15 +266,8 @@ Response spt::client::akumuli::annotations( const spt::model::AnnotationsReq& re
   const auto an = model::AnnotationResponse::parse( resp.body );
   std::ostringstream oss;
   oss << '[';
-
-  bool first = true;
-  for ( const auto& a : an )
-  {
-    if ( !first ) oss << ',';
-    oss << a;
-    first = false;
-  }
-
+  std::copy( std::begin( an ), std::end( an ),
+      std::experimental::make_ostream_joiner( ss, ", " ) );
   oss << ']';
   resp.body = oss.str();
 
