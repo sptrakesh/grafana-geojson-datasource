@@ -39,11 +39,13 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 endif()
 
+
+include_directories(
+  ${Boost_INCLUDE_DIR}
+)
+
 if (APPLE)
   set(CMAKE_MACOSX_RPATH 1)
-  include_directories(
-    /usr/local/boost/include
-  )
 else()
   include_directories(
     /opt/local/include

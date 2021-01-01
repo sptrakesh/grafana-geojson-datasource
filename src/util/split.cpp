@@ -6,9 +6,8 @@
 
 #include <algorithm>
 
-std::vector<std::string_view>
-spt::util::split( std::string_view csv, std::size_t sizehint,
-    std::string_view delims )
+std::vector<std::string_view> spt::util::split(
+    std::string_view csv, std::size_t sizehint, std::string_view delims )
 {
   std::vector<std::string_view> output;
   output.reserve( sizehint );

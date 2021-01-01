@@ -307,7 +307,7 @@ Response spt::client::akumuli::search( const spt::model::Target& target )
 
   const auto lines = util::split( resp.body, 8, "\r\n" );
   bool first = true;
-  for ( const auto line : lines )
+  for ( const auto& line : lines )
   {
     if ( line.size() < 2 ) continue;
     if ( !first ) oss << ',';
@@ -354,7 +354,7 @@ Response spt::client::akumuli::tagKeys()
   auto lines = util::split( resp.body, 8, "\r\n" );
   std::sort( std::begin( lines ), std::end( lines ) );
   bool first = true;
-  for ( const auto line : lines )
+  for ( const auto& line : lines )
   {
     if ( line.size() < 2 ) continue;
 
@@ -411,7 +411,7 @@ Response spt::client::akumuli::tagValues( const model::Tag& tag )
   auto lines = util::split( resp.body, 8, "\r\n" );
   std::sort( std::begin( lines ), std::end( lines ) );
   bool first = true;
-  for ( const auto line : lines )
+  for ( const auto& line : lines )
   {
     if ( line.size() < 2 ) continue;
     if ( !first ) oss << ',';

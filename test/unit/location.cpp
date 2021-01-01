@@ -78,23 +78,20 @@ SCENARIO( "Parse location data in RESP format from Akumuli" )
 
       THEN( "RESP format data parsed successfully" )
       {
-        REQUIRE( response.columns.size() == 1 );
+        REQUIRE( response.columns.size() == 4 );
         REQUIRE( response.rows.size() == 19 );
         REQUIRE( response.type == "table" );
       }
 
-      AND_THEN( "Location data is in geo:json format" )
+      AND_THEN( "Location data is in table format" )
       {
-        for ( const auto& inner : response.rows )
+        for ( const auto& row : response.rows )
         {
-          for ( const auto& row : inner )
-          {
-            REQUIRE( row.type == "geo:json" );
-            REQUIRE( row.value.type == "Point" );
-            REQUIRE( row.value.coordinates.size() == 2 );
-            REQUIRE( row.metadata.timestamp.type == "DateTime" );
-            REQUIRE( row.metadata.timestamp.value.find( "2020-05-1" ) != std::string::npos );
-          }
+          REQUIRE( row.type == "geo:json" );
+          REQUIRE( row.value.type == "Point" );
+          REQUIRE( row.value.coordinates.size() == 2 );
+          REQUIRE( row.metadata.timestamp.type == "DateTime" );
+          REQUIRE( row.metadata.timestamp.value.find( "2020-05-1" ) != std::string::npos );
         }
       }
 

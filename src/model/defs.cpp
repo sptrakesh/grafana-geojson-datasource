@@ -292,8 +292,11 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
 {
   type = "table";
 
-  columns.reserve( 1 );
-  columns.push_back( model::Column{ "location", "geo:json" } );
+  columns.reserve( 3 );
+  columns.emplace_back( model::Column{ "latitude", "number" } );
+  columns.emplace_back( model::Column{ "longitude", "number" } );
+  columns.emplace_back( model::Column{ "timestamp", "time" } );
+  columns.emplace_back( model::Column{ "tooltip", "string" } );
 
   for ( std::size_t i = 2; i < lines.size(); i += 3 )
   {
@@ -322,11 +325,11 @@ std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Column
 
 std::ostream& spt::model::operator<<( std::ostream& os, const spt::model::Row& row )
 {
-  os << R"([{"type": ")" << row.type << R"(", "value": {"type": ")" <<
-     row.value.type << R"(", "coordinates": [)" <<
-     row.value.coordinates[0] << ',' << row.value.coordinates[1] <<
-     R"(], "metadata": {"timestamp": {"type": ")" << row.metadata.timestamp.type <<
-     R"(", "value": ")" << row.metadata.timestamp.value << "\"}}}}]";
+  const auto ns = std::chrono::nanoseconds{ row.metadata.timestamp.valueNs() };
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>( ns ).count();
+  os << '[' << row.value.coordinates[0] << ',' << row.value.coordinates[1] <<
+    ',' << ms <<
+    ',' << std::quoted( row.metadata.timestamp.value ) << ']';
   return os;
 }
 

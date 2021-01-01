@@ -1,5 +1,6 @@
 # Grafana Geo:JSON Datasource
 
+* [Versions](#versions)
 * [Implementation](#implementation)
     * [Setup](#setup)
         * [Datasource](#datasource)
@@ -13,6 +14,12 @@
 
 Datasource backend for the [Grafana Simple JSON](https://grafana.com/grafana/plugins/grafana-simple-json-datasource)
 datasource plugin.
+
+## Versions
+Versions previous to `0.7` returned the raw *geo:json* data.  This was in keeping
+with the support from the *trackmap* panel.  Newer version (post 1.x) of the
+panel does not support *geo:json*, and hence this data source returns the same
+data in raw table form as documented by the panel.
 
 ## Implementation
 
@@ -78,16 +85,20 @@ related to visitors accessing front-end applications hosted from S3 buckets.
 
 ## Configuration
 The server can be configured with the following options:
-* `--port` - The *port* on which the server listens.  Default `8020`.
+* `--port` - The *port* on which the server listens.  Default `8020`.  When running
+  as a `docker` container, specify the override using the `PORT` environment variable.
 * `--threads` - Number of I/O threads for the server.  Defaults to `std::thread::hardware_concurrency`.
+  When running as a `docker` container, override using the `THREADS` environment variable.
 * `--akumuli-host` - Host name for connecting to *Akumuli*.
+  When running as a `docker` container, specify using the `AKUMULI_HOST` environment variable.
 * `--akumuli-port` - Port on which *Akumuli* query service listens.  Default
 is `8181`.
+  When running as a `docker` container, override using the `AKUMULI_PORT` environment variable.
 * `--metric-name` - Default *metric* to match against for the optional `/tag-keys`
 and `/tag-values` endpoints.  Grafana *adhoc* filters are applied at the dashboard
 level, and the requests do not contain any *metric* related information.  If not
 specified, *tag* services will be disabled (return empty array).
-
+  
 ## Acknowledgements
 This software has been developed mainly using work other people have contributed.
 The following are the components used to build this software:
