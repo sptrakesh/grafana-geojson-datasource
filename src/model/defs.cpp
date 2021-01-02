@@ -292,7 +292,7 @@ void spt::model::LocationResponse::load( const std::vector<std::string_view>& li
 {
   type = "table";
 
-  columns.reserve( 3 );
+  columns.reserve( 4 );
   columns.emplace_back( model::Column{ "latitude", "number" } );
   columns.emplace_back( model::Column{ "longitude", "number" } );
   columns.emplace_back( model::Column{ "timestamp", "time" } );
