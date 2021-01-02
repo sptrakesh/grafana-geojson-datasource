@@ -17,7 +17,7 @@ datasource plugin.
 
 ## Versions
 Versions previous to `0.7` returned the raw *geo:json* data.  This was in keeping
-with the support from the *trackmap* panel.  Newer version (post 1.x) of the
+with the support from the *trackmap* panel.  Newer version (2.x) of the
 panel does not support *geo:json*, and hence this data source returns the same
 data in raw table form as documented by the panel.
 
